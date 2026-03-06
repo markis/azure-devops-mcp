@@ -95,6 +95,10 @@ The server runs over stdio and follows the [Model Context Protocol](https://mode
 
 ### Configuring MCP Clients
 
+You can configure the server using either:
+1. **Pre-built binary** (recommended): Download from releases and use the binary path
+2. **Go run**: Run directly from source (requires Go installed)
+
 #### Claude Desktop
 
 Add to your Claude Desktop configuration file:
@@ -102,11 +106,29 @@ Add to your Claude Desktop configuration file:
 **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
+**Using pre-built binary:**
 ```json
 {
   "mcpServers": {
     "azure-devops": {
       "command": "/usr/local/bin/azure-devops-mcp",
+      "env": {
+        "AZURE_DEVOPS_ORG_URL": "https://dev.azure.com/your-org",
+        "AZURE_DEVOPS_PAT": "your-personal-access-token",
+        "AZURE_DEVOPS_PROJECT": "your-project-name"
+      }
+    }
+  }
+}
+```
+
+**Using go run (requires Go installed):**
+```json
+{
+  "mcpServers": {
+    "azure-devops": {
+      "command": "go",
+      "args": ["run", "github.com/markistaylor/azure-devops-mcp/cmd/azure-devops-mcp@latest"],
       "env": {
         "AZURE_DEVOPS_ORG_URL": "https://dev.azure.com/your-org",
         "AZURE_DEVOPS_PAT": "your-personal-access-token",
@@ -124,11 +146,29 @@ Add to your Cline MCP settings file:
 **macOS/Linux**: `~/.config/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
 **Windows**: `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`
 
+**Using pre-built binary:**
 ```json
 {
   "mcpServers": {
     "azure-devops": {
       "command": "/usr/local/bin/azure-devops-mcp",
+      "env": {
+        "AZURE_DEVOPS_ORG_URL": "https://dev.azure.com/your-org",
+        "AZURE_DEVOPS_PAT": "your-personal-access-token",
+        "AZURE_DEVOPS_PROJECT": "your-project-name"
+      }
+    }
+  }
+}
+```
+
+**Using go run:**
+```json
+{
+  "mcpServers": {
+    "azure-devops": {
+      "command": "go",
+      "args": ["run", "github.com/markistaylor/azure-devops-mcp/cmd/azure-devops-mcp@latest"],
       "env": {
         "AZURE_DEVOPS_ORG_URL": "https://dev.azure.com/your-org",
         "AZURE_DEVOPS_PAT": "your-personal-access-token",
@@ -145,11 +185,29 @@ Add to your OpenCode MCP configuration:
 
 **macOS/Linux**: `~/.config/opencode/mcp.json`
 
+**Using pre-built binary:**
 ```json
 {
   "mcpServers": {
     "azure-devops": {
       "command": "/usr/local/bin/azure-devops-mcp",
+      "env": {
+        "AZURE_DEVOPS_ORG_URL": "https://dev.azure.com/your-org",
+        "AZURE_DEVOPS_PAT": "your-personal-access-token",
+        "AZURE_DEVOPS_PROJECT": "your-project-name"
+      }
+    }
+  }
+}
+```
+
+**Using go run:**
+```json
+{
+  "mcpServers": {
+    "azure-devops": {
+      "command": "go",
+      "args": ["run", "github.com/markistaylor/azure-devops-mcp/cmd/azure-devops-mcp@latest"],
       "env": {
         "AZURE_DEVOPS_ORG_URL": "https://dev.azure.com/your-org",
         "AZURE_DEVOPS_PAT": "your-personal-access-token",
