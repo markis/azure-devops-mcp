@@ -20,41 +20,51 @@ var mdOpts = &md.Options{
 var htmlToMD = md.NewConverter("", true, mdOpts)
 
 // ErrNoFieldsToUpdate is returned when UpdateWorkItem is called with no fields set.
-var ErrNoFieldsToUpdate = errors.New("no fields to update: provide at least one of title, state, assigned_to, or description")
+var ErrNoFieldsToUpdate = errors.New("no fields to update: provide at least one of title, state, assigned_to, description, acceptance_criteria, story_points, original_estimate, or size")
 
 // WorkItem is a slim representation of an Azure DevOps work item.
 // Only fields Claude needs are included — not the full API response.
 type WorkItem struct {
-	ID                 int    `json:"id"`
-	Title              string `json:"title"`
-	State              string `json:"state"`
-	Type               string `json:"type"`
-	AssignedTo         string `json:"assigned_to"`
-	Description        string `json:"description"`
-	AcceptanceCriteria string `json:"acceptance_criteria,omitempty"`
-	ReproSteps         string `json:"repro_steps,omitempty"`
-	Tags               string `json:"tags"`
-	Priority           int    `json:"priority,omitempty"`
-	AreaPath           string `json:"area_path,omitempty"`
-	IterationPath      string `json:"iteration_path,omitempty"`
-	ParentID           int    `json:"parent_id,omitempty"`
-	URL                string `json:"url"`
+	ID                 int     `json:"id"`
+	Title              string  `json:"title"`
+	State              string  `json:"state"`
+	Type               string  `json:"type"`
+	AssignedTo         string  `json:"assigned_to"`
+	Description        string  `json:"description"`
+	AcceptanceCriteria string  `json:"acceptance_criteria,omitempty"`
+	ReproSteps         string  `json:"repro_steps,omitempty"`
+	Tags               string  `json:"tags"`
+	Priority           int     `json:"priority,omitempty"`
+	StoryPoints        float64 `json:"story_points,omitempty"`
+	OriginalEstimate   float64 `json:"original_estimate,omitempty"`
+	Size               string  `json:"size,omitempty"`
+	AreaPath           string  `json:"area_path,omitempty"`
+	IterationPath      string  `json:"iteration_path,omitempty"`
+	ParentID           int     `json:"parent_id,omitempty"`
+	URL                string  `json:"url"`
 }
 
 // CreateOptions holds optional fields for creating a work item.
 type CreateOptions struct {
-	Description string
-	AssignedTo  string
-	Tags        string
+	Description      string
+	AssignedTo       string
+	Tags             string
+	StoryPoints      float64
+	OriginalEstimate float64
+	Size             string
 }
 
 // UpdateOptions holds fields that can be patched on a work item.
-// Only non-empty strings are applied.
+// Only non-zero/non-empty values are applied.
 type UpdateOptions struct {
-	Title       string
-	State       string
-	AssignedTo  string
-	Description string
+	Title              string
+	State              string
+	AssignedTo         string
+	Description        string
+	AcceptanceCriteria string
+	StoryPoints        float64
+	OriginalEstimate   float64
+	Size               string
 }
 
 // ADOClient is the interface tool handlers depend on.
@@ -95,6 +105,9 @@ func (c *RealADOClient) GetWorkItem(ctx context.Context, project string, id int)
 		"System.AreaPath", "System.IterationPath", "System.Parent",
 		"Microsoft.VSTS.Common.AcceptanceCriteria",
 		"Microsoft.VSTS.Common.Priority",
+		"Custom.Teeshirtsizing",
+		"Microsoft.VSTS.Scheduling.StoryPoints",
+		"Microsoft.VSTS.Scheduling.OriginalEstimate",
 		"Microsoft.VSTS.TCM.ReproSteps",
 	}
 
@@ -149,6 +162,18 @@ func (c *RealADOClient) CreateWorkItem(ctx context.Context, project, workItemTyp
 		ops = append(ops, webapi.JsonPatchOperation{Op: &add, Path: ptr("/fields/System.Tags"), Value: opts.Tags})
 	}
 
+	if opts.StoryPoints != 0 {
+		ops = append(ops, webapi.JsonPatchOperation{Op: &add, Path: ptr("/fields/Microsoft.VSTS.Scheduling.StoryPoints"), Value: opts.StoryPoints})
+	}
+
+	if opts.OriginalEstimate != 0 {
+		ops = append(ops, webapi.JsonPatchOperation{Op: &add, Path: ptr("/fields/Microsoft.VSTS.Scheduling.OriginalEstimate"), Value: opts.OriginalEstimate})
+	}
+
+	if opts.Size != "" {
+		ops = append(ops, webapi.JsonPatchOperation{Op: &add, Path: ptr("/fields/Custom.Teeshirtsizing"), Value: opts.Size})
+	}
+
 	item, err := c.wit.CreateWorkItem(ctx, workitemtracking.CreateWorkItemArgs{
 		Document: &ops,
 		Project:  &project,
@@ -164,25 +189,7 @@ func (c *RealADOClient) CreateWorkItem(ctx context.Context, project, workItemTyp
 // UpdateWorkItem patches fields on an existing work item.
 // Returns ErrNoFieldsToUpdate if no fields are provided.
 func (c *RealADOClient) UpdateWorkItem(ctx context.Context, project string, id int, opts UpdateOptions) (*WorkItem, error) {
-	replace := webapi.OperationValues.Replace
-
-	var ops []webapi.JsonPatchOperation
-	if opts.Title != "" {
-		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: ptr("/fields/System.Title"), Value: opts.Title})
-	}
-
-	if opts.State != "" {
-		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: ptr("/fields/System.State"), Value: opts.State})
-	}
-
-	if opts.AssignedTo != "" {
-		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: ptr("/fields/System.AssignedTo"), Value: opts.AssignedTo})
-	}
-
-	if opts.Description != "" {
-		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: ptr("/fields/System.Description"), Value: opts.Description})
-	}
-
+	ops := buildUpdateOps(opts)
 	if len(ops) == 0 {
 		return nil, ErrNoFieldsToUpdate
 	}
@@ -227,6 +234,9 @@ func (c *RealADOClient) fetchByRefs(ctx context.Context, project string, refs *[
 		"System.AreaPath", "System.IterationPath", "System.Parent",
 		"Microsoft.VSTS.Common.AcceptanceCriteria",
 		"Microsoft.VSTS.Common.Priority",
+		"Custom.Teeshirtsizing",
+		"Microsoft.VSTS.Scheduling.StoryPoints",
+		"Microsoft.VSTS.Scheduling.OriginalEstimate",
 		"Microsoft.VSTS.TCM.ReproSteps",
 	}
 
@@ -268,6 +278,9 @@ func toWorkItem(item *workitemtracking.WorkItem) *WorkItem {
 		AreaPath:           fieldString(f, "System.AreaPath"),
 		IterationPath:      fieldString(f, "System.IterationPath"),
 		Priority:           fieldInt(f, "Microsoft.VSTS.Common.Priority"),
+		StoryPoints:        fieldFloat(f, "Microsoft.VSTS.Scheduling.StoryPoints"),
+		OriginalEstimate:   fieldFloat(f, "Microsoft.VSTS.Scheduling.OriginalEstimate"),
+		Size:               fieldString(f, "Custom.Teeshirtsizing"),
 		ParentID:           extractParentID(f),
 		AssignedTo:         extractAssignedTo(f),
 	}
@@ -307,6 +320,58 @@ func fieldInt(f *map[string]any, key string) int {
 	default:
 		return 0
 	}
+}
+
+// buildUpdateOps converts UpdateOptions into a JSON patch operation slice.
+func buildUpdateOps(opts UpdateOptions) []webapi.JsonPatchOperation {
+	replace := webapi.OperationValues.Replace
+
+	var ops []webapi.JsonPatchOperation
+	if opts.Title != "" {
+		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: ptr("/fields/System.Title"), Value: opts.Title})
+	}
+
+	if opts.State != "" {
+		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: ptr("/fields/System.State"), Value: opts.State})
+	}
+
+	if opts.AssignedTo != "" {
+		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: ptr("/fields/System.AssignedTo"), Value: opts.AssignedTo})
+	}
+
+	if opts.Description != "" {
+		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: ptr("/fields/System.Description"), Value: opts.Description})
+	}
+
+	if opts.AcceptanceCriteria != "" {
+		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: ptr("/fields/Microsoft.VSTS.Common.AcceptanceCriteria"), Value: opts.AcceptanceCriteria})
+	}
+
+	if opts.StoryPoints != 0 {
+		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: ptr("/fields/Microsoft.VSTS.Scheduling.StoryPoints"), Value: opts.StoryPoints})
+	}
+
+	if opts.OriginalEstimate != 0 {
+		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: ptr("/fields/Microsoft.VSTS.Scheduling.OriginalEstimate"), Value: opts.OriginalEstimate})
+	}
+
+	if opts.Size != "" {
+		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: ptr("/fields/Custom.Teeshirtsizing"), Value: opts.Size})
+	}
+
+	return ops
+}
+
+// fieldFloat extracts a float64 value from the ADO fields map.
+func fieldFloat(f *map[string]any, key string) float64 {
+	v, ok := (*f)[key]
+	if !ok || v == nil {
+		return 0
+	}
+
+	n, _ := v.(float64)
+
+	return n
 }
 
 // extractParentID pulls the numeric ID from the System.Parent relation field.

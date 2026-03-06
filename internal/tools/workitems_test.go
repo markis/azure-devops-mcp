@@ -160,6 +160,82 @@ func TestUpdateWorkItem_UpdatesAndReturnsItem(t *testing.T) {
 	}
 }
 
+func TestGetWorkItem_ReturnsEstimationFields(t *testing.T) {
+	mock := &client.MockADOClient{
+		GetWorkItemFn: func(_ context.Context, _ string, _ int) (*client.WorkItem, error) {
+			return &client.WorkItem{
+				ID:               42,
+				Title:            "My story",
+				StoryPoints:      5,
+				OriginalEstimate: 8.5,
+				Size:             "M",
+			}, nil
+		},
+	}
+
+	h := tools.NewHandlers(mock, "MyProject")
+
+	result, err := h.GetWorkItem(context.Background(), 42, "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var wi client.WorkItem
+	if err := json.Unmarshal([]byte(result), &wi); err != nil {
+		t.Fatalf("result not valid JSON: %v", err)
+	}
+
+	if wi.StoryPoints != 5 {
+		t.Errorf("expected story points 5, got %v", wi.StoryPoints)
+	}
+
+	if wi.OriginalEstimate != 8.5 {
+		t.Errorf("expected original estimate 8.5, got %v", wi.OriginalEstimate)
+	}
+
+	if wi.Size != "M" {
+		t.Errorf("expected size 'M', got %q", wi.Size)
+	}
+}
+
+func TestUpdateWorkItem_UpdatesEstimationFields(t *testing.T) {
+	mock := &client.MockADOClient{
+		UpdateWorkItemFn: func(_ context.Context, _ string, id int, opts client.UpdateOptions) (*client.WorkItem, error) {
+			return &client.WorkItem{
+				ID:               id,
+				StoryPoints:      opts.StoryPoints,
+				OriginalEstimate: opts.OriginalEstimate,
+				Size:             opts.Size,
+			}, nil
+		},
+	}
+
+	h := tools.NewHandlers(mock, "MyProject")
+	opts := client.UpdateOptions{StoryPoints: 3, OriginalEstimate: 4.0, Size: "S"}
+
+	result, err := h.UpdateWorkItem(context.Background(), 42, opts, "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var wi client.WorkItem
+	if err := json.Unmarshal([]byte(result), &wi); err != nil {
+		t.Fatalf("result not valid JSON: %v", err)
+	}
+
+	if wi.StoryPoints != 3 {
+		t.Errorf("expected story points 3, got %v", wi.StoryPoints)
+	}
+
+	if wi.OriginalEstimate != 4.0 {
+		t.Errorf("expected original estimate 4.0, got %v", wi.OriginalEstimate)
+	}
+
+	if wi.Size != "S" {
+		t.Errorf("expected size 'S', got %q", wi.Size)
+	}
+}
+
 func TestGetWorkItem_ReturnsAcceptanceCriteria(t *testing.T) {
 	mock := &client.MockADOClient{
 		GetWorkItemFn: func(_ context.Context, _ string, _ int) (*client.WorkItem, error) {

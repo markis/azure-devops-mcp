@@ -94,12 +94,15 @@ func Run(ctx context.Context, cfg Config) error {
 
 	// create_work_item
 	type createWorkItemInput struct {
-		Type        string `json:"type"`
-		Title       string `json:"title"`
-		Description string `json:"description,omitempty"`
-		AssignedTo  string `json:"assigned_to,omitempty"`
-		Tags        string `json:"tags,omitempty"`
-		Project     string `json:"project,omitempty"`
+		Type             string  `json:"type"`
+		Title            string  `json:"title"`
+		Description      string  `json:"description,omitempty"`
+		AssignedTo       string  `json:"assigned_to,omitempty"`
+		Tags             string  `json:"tags,omitempty"`
+		StoryPoints      float64 `json:"story_points,omitempty"`
+		OriginalEstimate float64 `json:"original_estimate,omitempty"`
+		Size             string  `json:"size,omitempty"`
+		Project          string  `json:"project,omitempty"`
 	}
 
 	mcp.AddTool(srv, &mcp.Tool{
@@ -107,9 +110,12 @@ func Run(ctx context.Context, cfg Config) error {
 		Description: "Create a new Azure DevOps work item.",
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, in createWorkItemInput) (*mcp.CallToolResult, any, error) {
 		opts := client.CreateOptions{
-			Description: in.Description,
-			AssignedTo:  in.AssignedTo,
-			Tags:        in.Tags,
+			Description:      in.Description,
+			AssignedTo:       in.AssignedTo,
+			Tags:             in.Tags,
+			StoryPoints:      in.StoryPoints,
+			OriginalEstimate: in.OriginalEstimate,
+			Size:             in.Size,
 		}
 
 		text, err := h.CreateWorkItem(ctx, in.Type, in.Title, opts, in.Project)
@@ -124,12 +130,16 @@ func Run(ctx context.Context, cfg Config) error {
 
 	// update_work_item
 	type updateWorkItemInput struct {
-		ID          int    `json:"id"`
-		Title       string `json:"title,omitempty"`
-		State       string `json:"state,omitempty"`
-		AssignedTo  string `json:"assigned_to,omitempty"`
-		Description string `json:"description,omitempty"`
-		Project     string `json:"project,omitempty"`
+		ID                 int     `json:"id"`
+		Title              string  `json:"title,omitempty"`
+		State              string  `json:"state,omitempty"`
+		AssignedTo         string  `json:"assigned_to,omitempty"`
+		Description        string  `json:"description,omitempty"`
+		AcceptanceCriteria string  `json:"acceptance_criteria,omitempty"`
+		StoryPoints        float64 `json:"story_points,omitempty"`
+		OriginalEstimate   float64 `json:"original_estimate,omitempty"`
+		Size               string  `json:"size,omitempty"`
+		Project            string  `json:"project,omitempty"`
 	}
 
 	mcp.AddTool(srv, &mcp.Tool{
@@ -137,10 +147,14 @@ func Run(ctx context.Context, cfg Config) error {
 		Description: "Update fields on an existing Azure DevOps work item.",
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, in updateWorkItemInput) (*mcp.CallToolResult, any, error) {
 		opts := client.UpdateOptions{
-			Title:       in.Title,
-			State:       in.State,
-			AssignedTo:  in.AssignedTo,
-			Description: in.Description,
+			Title:              in.Title,
+			State:              in.State,
+			AssignedTo:         in.AssignedTo,
+			Description:        in.Description,
+			AcceptanceCriteria: in.AcceptanceCriteria,
+			StoryPoints:        in.StoryPoints,
+			OriginalEstimate:   in.OriginalEstimate,
+			Size:               in.Size,
 		}
 
 		text, err := h.UpdateWorkItem(ctx, in.ID, opts, in.Project)
