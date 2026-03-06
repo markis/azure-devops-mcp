@@ -13,7 +13,7 @@ linters:
     - nlreturn      # stylistic preference we don't share
     - noinlineerr   # too pedantic for this codebase
     - paralleltest  # no benefit running these tests in parallel
-    - staticcheck   # SA5011 false positives on nil checks before dereference in test helper functions
+    - staticcheck   # SA5011 false positives; exclude-rules not working in v2
     - tagliatelle   # we need snake_case JSON tags to match ADO API conventions
     - testpackage   # some tests need same-package access to test unexported functions
     - varnamelen    # short names are idiomatic Go

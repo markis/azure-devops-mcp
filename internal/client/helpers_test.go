@@ -215,6 +215,7 @@ func TestPtr_String(t *testing.T) {
 		t.Fatal("expected non-nil pointer")
 	}
 
+	//nolint:staticcheck // SA5011: false positive - nil check above prevents dereference
 	if *p != "test" {
 		t.Errorf("expected 'test', got %q", *p)
 	}
@@ -228,6 +229,7 @@ func TestPtr_Int(t *testing.T) {
 		t.Fatal("expected non-nil pointer")
 	}
 
+	//nolint:staticcheck // SA5011: false positive - nil check above prevents dereference
 	if *p != 42 {
 		t.Errorf("expected 42, got %d", *p)
 	}
