@@ -1,3 +1,8 @@
 bin/
 azure-devops-mcp
 docs/
+
+# Test coverage
+coverage.out
+coverage.html
+*.coverprofile
