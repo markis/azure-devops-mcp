@@ -27,23 +27,28 @@ func Run(ctx context.Context, cfg Config) error {
 	}
 
 	h := tools.NewHandlers(ado, cfg.Project)
-	srv := createServer()
+	srv := CreateServer()
+	RegisterTools(srv, h)
+
+	return srv.Run(ctx, &mcp.StdioTransport{})
+}
+
+// CreateServer creates and configures the MCP server instance.
+func CreateServer() *mcp.Server {
+	return mcp.NewServer(&mcp.Implementation{
+		Name:    "azure-devops-mcp",
+		Version: "0.1.0",
+	}, nil)
+}
+
+// RegisterTools registers all Azure DevOps work item tools with the MCP server.
+func RegisterTools(srv *mcp.Server, h *tools.Handlers) {
 	registerGetWorkItem(srv, h)
 	registerListWorkItems(srv, h)
 	registerListMyWorkItems(srv, h)
 	registerCreateWorkItem(srv, h)
 	registerUpdateWorkItem(srv, h)
 	registerAddComment(srv, h)
-
-	return srv.Run(ctx, &mcp.StdioTransport{})
-}
-
-// createServer creates and configures the MCP server instance.
-func createServer() *mcp.Server {
-	return mcp.NewServer(&mcp.Implementation{
-		Name:    "azure-devops-mcp",
-		Version: "0.1.0",
-	}, nil)
 }
 
 // registerGetWorkItem registers the get_work_item tool.

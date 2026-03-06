@@ -343,3 +343,137 @@ func TestAddComment_PostsComment(t *testing.T) {
 		t.Error("expected non-empty result")
 	}
 }
+
+// Error path tests
+
+func TestGetWorkItem_Error(t *testing.T) {
+	mock := &client.MockADOClient{
+		GetWorkItemFn: func(_ context.Context, _ string, _ int) (*client.WorkItem, error) {
+			return nil, client.ErrNoFieldsToUpdate
+		},
+	}
+
+	h := tools.NewHandlers(mock, "MyProject")
+
+	_, err := h.GetWorkItem(context.Background(), 42, "")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestListWorkItems_Error(t *testing.T) {
+	mock := &client.MockADOClient{
+		ListWorkItemsFn: func(_ context.Context, _ string, _ string) ([]*client.WorkItem, error) {
+			return nil, client.ErrNoFieldsToUpdate
+		},
+	}
+
+	h := tools.NewHandlers(mock, "MyProject")
+
+	_, err := h.ListWorkItems(context.Background(), "query", "")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestListMyWorkItems_Error(t *testing.T) {
+	mock := &client.MockADOClient{
+		ListMyWorkItemsFn: func(_ context.Context, _ string) ([]*client.WorkItem, error) {
+			return nil, client.ErrNoFieldsToUpdate
+		},
+	}
+
+	h := tools.NewHandlers(mock, "MyProject")
+
+	_, err := h.ListMyWorkItems(context.Background(), "")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestCreateWorkItem_Error(t *testing.T) {
+	mock := &client.MockADOClient{
+		CreateWorkItemFn: func(
+			_ context.Context, _, _, _ string, _ client.CreateOptions,
+		) (*client.WorkItem, error) {
+			return nil, client.ErrNoFieldsToUpdate
+		},
+	}
+
+	h := tools.NewHandlers(mock, "MyProject")
+
+	_, err := h.CreateWorkItem(context.Background(), "Bug", "Title", client.CreateOptions{}, "")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestUpdateWorkItem_Error(t *testing.T) {
+	mock := &client.MockADOClient{
+		UpdateWorkItemFn: func(
+			_ context.Context, _ string, _ int, _ client.UpdateOptions,
+		) (*client.WorkItem, error) {
+			return nil, client.ErrNoFieldsToUpdate
+		},
+	}
+
+	h := tools.NewHandlers(mock, "MyProject")
+
+	_, err := h.UpdateWorkItem(context.Background(), 42, client.UpdateOptions{}, "")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestAddComment_Error(t *testing.T) {
+	mock := &client.MockADOClient{
+		AddCommentFn: func(_ context.Context, _ string, _ int, _ string) error {
+			return client.ErrNoFieldsToUpdate
+		},
+	}
+
+	h := tools.NewHandlers(mock, "MyProject")
+
+	_, err := h.AddComment(context.Background(), 42, "comment", "")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestProject_UsesOverride(t *testing.T) {
+	mock := &client.MockADOClient{
+		GetWorkItemFn: func(_ context.Context, project string, _ int) (*client.WorkItem, error) {
+			if project != "OverrideProject" {
+				t.Errorf("expected project 'OverrideProject', got %q", project)
+			}
+
+			return &client.WorkItem{ID: 1}, nil
+		},
+	}
+
+	h := tools.NewHandlers(mock, "DefaultProject")
+
+	_, err := h.GetWorkItem(context.Background(), 1, "OverrideProject")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestProject_UsesDefault(t *testing.T) {
+	mock := &client.MockADOClient{
+		GetWorkItemFn: func(_ context.Context, project string, _ int) (*client.WorkItem, error) {
+			if project != "DefaultProject" {
+				t.Errorf("expected project 'DefaultProject', got %q", project)
+			}
+
+			return &client.WorkItem{ID: 1}, nil
+		},
+	}
+
+	h := tools.NewHandlers(mock, "DefaultProject")
+
+	_, err := h.GetWorkItem(context.Background(), 1, "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
