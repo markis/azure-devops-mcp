@@ -207,32 +207,6 @@ func TestConvertToMarkdown_SimpleHTML(t *testing.T) {
 	}
 }
 
-func TestPtr_String(t *testing.T) {
-	s := "test"
-	p := ptr(s)
-
-	if p == nil {
-		t.Fatal("expected non-nil pointer")
-	}
-
-	if *p != "test" {
-		t.Errorf("expected 'test', got %q", *p)
-	}
-}
-
-func TestPtr_Int(t *testing.T) {
-	i := 42
-	p := ptr(i)
-
-	if p == nil {
-		t.Fatal("expected non-nil pointer")
-	}
-
-	if *p != 42 {
-		t.Errorf("expected 42, got %d", *p)
-	}
-}
-
 func TestBuildUpdateOps_AllFields(t *testing.T) {
 	opts := UpdateOptions{
 		Title:              "Updated Title",

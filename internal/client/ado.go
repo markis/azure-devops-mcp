@@ -25,6 +25,20 @@ var ErrNoFieldsToUpdate = errors.New(
 		"description, acceptance_criteria, story_points, original_estimate, or size",
 )
 
+// Field path constants for Azure DevOps work item fields.
+// These are used as pointers in JsonPatchOperation.Path.
+var (
+	fieldPathTitle              = "/fields/System.Title"
+	fieldPathState              = "/fields/System.State"
+	fieldPathDescription        = "/fields/System.Description"
+	fieldPathAssignedTo         = "/fields/System.AssignedTo"
+	fieldPathTags               = "/fields/System.Tags"
+	fieldPathAcceptanceCriteria = "/fields/Microsoft.VSTS.Common.AcceptanceCriteria"
+	fieldPathStoryPoints        = "/fields/Microsoft.VSTS.Scheduling.StoryPoints"
+	fieldPathOriginalEstimate   = "/fields/Microsoft.VSTS.Scheduling.OriginalEstimate"
+	fieldPathSize               = "/fields/Custom.Teeshirtsizing"
+)
+
 // WorkItem is a slim representation of an Azure DevOps work item.
 // Only fields Claude needs are included — not the full API response.
 type WorkItem struct {
@@ -155,38 +169,38 @@ func (c *RealADOClient) CreateWorkItem(
 	add := webapi.OperationValues.Add
 
 	ops := []webapi.JsonPatchOperation{
-		{Op: &add, Path: ptr("/fields/System.Title"), Value: title},
+		{Op: &add, Path: &fieldPathTitle, Value: title},
 	}
 	if opts.Description != "" {
 		ops = append(ops, webapi.JsonPatchOperation{
-			Op: &add, Path: ptr("/fields/System.Description"), Value: opts.Description,
+			Op: &add, Path: &fieldPathDescription, Value: opts.Description,
 		})
 	}
 
 	if opts.AssignedTo != "" {
-		ops = append(ops, webapi.JsonPatchOperation{Op: &add, Path: ptr("/fields/System.AssignedTo"), Value: opts.AssignedTo})
+		ops = append(ops, webapi.JsonPatchOperation{Op: &add, Path: &fieldPathAssignedTo, Value: opts.AssignedTo})
 	}
 
 	if opts.Tags != "" {
-		ops = append(ops, webapi.JsonPatchOperation{Op: &add, Path: ptr("/fields/System.Tags"), Value: opts.Tags})
+		ops = append(ops, webapi.JsonPatchOperation{Op: &add, Path: &fieldPathTags, Value: opts.Tags})
 	}
 
 	if opts.StoryPoints != 0 {
 		ops = append(ops, webapi.JsonPatchOperation{
-			Op: &add, Path: ptr("/fields/Microsoft.VSTS.Scheduling.StoryPoints"), Value: opts.StoryPoints,
+			Op: &add, Path: &fieldPathStoryPoints, Value: opts.StoryPoints,
 		})
 	}
 
 	if opts.OriginalEstimate != 0 {
 		ops = append(ops, webapi.JsonPatchOperation{
 			Op:    &add,
-			Path:  ptr("/fields/Microsoft.VSTS.Scheduling.OriginalEstimate"),
+			Path:  &fieldPathOriginalEstimate,
 			Value: opts.OriginalEstimate,
 		})
 	}
 
 	if opts.Size != "" {
-		ops = append(ops, webapi.JsonPatchOperation{Op: &add, Path: ptr("/fields/Custom.Teeshirtsizing"), Value: opts.Size})
+		ops = append(ops, webapi.JsonPatchOperation{Op: &add, Path: &fieldPathSize, Value: opts.Size})
 	}
 
 	item, err := c.wit.CreateWorkItem(ctx, workitemtracking.CreateWorkItemArgs{
@@ -347,29 +361,29 @@ func buildUpdateOps(opts UpdateOptions) []webapi.JsonPatchOperation {
 
 	var ops []webapi.JsonPatchOperation
 	if opts.Title != "" {
-		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: ptr("/fields/System.Title"), Value: opts.Title})
+		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: &fieldPathTitle, Value: opts.Title})
 	}
 
 	if opts.State != "" {
-		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: ptr("/fields/System.State"), Value: opts.State})
+		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: &fieldPathState, Value: opts.State})
 	}
 
 	if opts.AssignedTo != "" {
 		ops = append(ops, webapi.JsonPatchOperation{
-			Op: &replace, Path: ptr("/fields/System.AssignedTo"), Value: opts.AssignedTo,
+			Op: &replace, Path: &fieldPathAssignedTo, Value: opts.AssignedTo,
 		})
 	}
 
 	if opts.Description != "" {
 		ops = append(ops, webapi.JsonPatchOperation{
-			Op: &replace, Path: ptr("/fields/System.Description"), Value: opts.Description,
+			Op: &replace, Path: &fieldPathDescription, Value: opts.Description,
 		})
 	}
 
 	if opts.AcceptanceCriteria != "" {
 		ops = append(ops, webapi.JsonPatchOperation{
 			Op:    &replace,
-			Path:  ptr("/fields/Microsoft.VSTS.Common.AcceptanceCriteria"),
+			Path:  &fieldPathAcceptanceCriteria,
 			Value: opts.AcceptanceCriteria,
 		})
 	}
@@ -377,7 +391,7 @@ func buildUpdateOps(opts UpdateOptions) []webapi.JsonPatchOperation {
 	if opts.StoryPoints != 0 {
 		ops = append(ops, webapi.JsonPatchOperation{
 			Op:    &replace,
-			Path:  ptr("/fields/Microsoft.VSTS.Scheduling.StoryPoints"),
+			Path:  &fieldPathStoryPoints,
 			Value: opts.StoryPoints,
 		})
 	}
@@ -385,14 +399,14 @@ func buildUpdateOps(opts UpdateOptions) []webapi.JsonPatchOperation {
 	if opts.OriginalEstimate != 0 {
 		ops = append(ops, webapi.JsonPatchOperation{
 			Op:    &replace,
-			Path:  ptr("/fields/Microsoft.VSTS.Scheduling.OriginalEstimate"),
+			Path:  &fieldPathOriginalEstimate,
 			Value: opts.OriginalEstimate,
 		})
 	}
 
 	if opts.Size != "" {
 		ops = append(ops, webapi.JsonPatchOperation{
-			Op: &replace, Path: ptr("/fields/Custom.Teeshirtsizing"), Value: opts.Size,
+			Op: &replace, Path: &fieldPathSize, Value: opts.Size,
 		})
 	}
 
@@ -449,5 +463,3 @@ func convertToMarkdown(raw string) string {
 
 	return converted
 }
-
-func ptr[T any](s T) *T { return &s }
