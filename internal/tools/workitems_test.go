@@ -48,8 +48,8 @@ func TestGetWorkItem_ReturnsWorkItem(t *testing.T) {
 
 func TestListWorkItems_ReturnsItems(t *testing.T) {
 	mock := &client.MockADOClient{
-		ListWorkItemsFn: func(_ context.Context, _, _ string) ([]*client.WorkItem, error) {
-			return []*client.WorkItem{
+		ListWorkItemsFn: func(_ context.Context, _, _ string) ([]*client.WorkItemSummary, error) {
+			return []*client.WorkItemSummary{
 				{ID: 1, Title: "Item one", State: "Active"},
 				{ID: 2, Title: "Item two", State: "Resolved"},
 			}, nil
@@ -75,8 +75,8 @@ func TestListWorkItems_ReturnsItems(t *testing.T) {
 
 func TestListMyWorkItems_ReturnsAssignedItems(t *testing.T) {
 	mock := &client.MockADOClient{
-		ListMyWorkItemsFn: func(_ context.Context, _ string) ([]*client.WorkItem, error) {
-			return []*client.WorkItem{
+		ListMyWorkItemsFn: func(_ context.Context, _ string) ([]*client.WorkItemSummary, error) {
+			return []*client.WorkItemSummary{
 				{ID: 5, Title: "My task", State: "Active", AssignedTo: "me@example.com"},
 			}, nil
 		},
@@ -363,7 +363,7 @@ func TestGetWorkItem_Error(t *testing.T) {
 
 func TestListWorkItems_Error(t *testing.T) {
 	mock := &client.MockADOClient{
-		ListWorkItemsFn: func(_ context.Context, _ string, _ string) ([]*client.WorkItem, error) {
+		ListWorkItemsFn: func(_ context.Context, _ string, _ string) ([]*client.WorkItemSummary, error) {
 			return nil, client.ErrNoFieldsToUpdate
 		},
 	}
@@ -378,7 +378,7 @@ func TestListWorkItems_Error(t *testing.T) {
 
 func TestListMyWorkItems_Error(t *testing.T) {
 	mock := &client.MockADOClient{
-		ListMyWorkItemsFn: func(_ context.Context, _ string) ([]*client.WorkItem, error) {
+		ListMyWorkItemsFn: func(_ context.Context, _ string) ([]*client.WorkItemSummary, error) {
 			return nil, client.ErrNoFieldsToUpdate
 		},
 	}

@@ -8,8 +8,8 @@ import "context"
 // Set each function field to control the response for that method.
 type MockADOClient struct {
 	GetWorkItemFn     func(ctx context.Context, project string, id int) (*WorkItem, error)
-	ListWorkItemsFn   func(ctx context.Context, project string, wiql string) ([]*WorkItem, error)
-	ListMyWorkItemsFn func(ctx context.Context, project string) ([]*WorkItem, error)
+	ListWorkItemsFn   func(ctx context.Context, project string, wiql string) ([]*WorkItemSummary, error)
+	ListMyWorkItemsFn func(ctx context.Context, project string) ([]*WorkItemSummary, error)
 	CreateWorkItemFn  func(ctx context.Context, project, workItemType, title string, opts CreateOptions) (*WorkItem, error)
 	UpdateWorkItemFn  func(ctx context.Context, project string, id int, opts UpdateOptions) (*WorkItem, error)
 	AddCommentFn      func(ctx context.Context, project string, id int, text string) error
@@ -21,12 +21,12 @@ func (m *MockADOClient) GetWorkItem(ctx context.Context, project string, id int)
 }
 
 // ListWorkItems delegates to ListWorkItemsFn.
-func (m *MockADOClient) ListWorkItems(ctx context.Context, project string, wiql string) ([]*WorkItem, error) {
+func (m *MockADOClient) ListWorkItems(ctx context.Context, project string, wiql string) ([]*WorkItemSummary, error) {
 	return m.ListWorkItemsFn(ctx, project, wiql)
 }
 
 // ListMyWorkItems delegates to ListMyWorkItemsFn.
-func (m *MockADOClient) ListMyWorkItems(ctx context.Context, project string) ([]*WorkItem, error) {
+func (m *MockADOClient) ListMyWorkItems(ctx context.Context, project string) ([]*WorkItemSummary, error) {
 	return m.ListMyWorkItemsFn(ctx, project)
 }
 

@@ -38,14 +38,14 @@ func TestMockADOClient_GetWorkItem(t *testing.T) {
 func TestMockADOClient_ListWorkItems(t *testing.T) {
 	called := false
 	mock := &client.MockADOClient{
-		ListWorkItemsFn: func(_ context.Context, project, _ string) ([]*client.WorkItem, error) {
+		ListWorkItemsFn: func(_ context.Context, project, _ string) ([]*client.WorkItemSummary, error) {
 			called = true
 
 			if project != "TestProject" {
 				t.Errorf("expected project 'TestProject', got %q", project)
 			}
 
-			return []*client.WorkItem{{ID: 1}, {ID: 2}}, nil
+			return []*client.WorkItemSummary{{ID: 1}, {ID: 2}}, nil
 		},
 	}
 
@@ -66,10 +66,10 @@ func TestMockADOClient_ListWorkItems(t *testing.T) {
 func TestMockADOClient_ListMyWorkItems(t *testing.T) {
 	called := false
 	mock := &client.MockADOClient{
-		ListMyWorkItemsFn: func(_ context.Context, _ string) ([]*client.WorkItem, error) {
+		ListMyWorkItemsFn: func(_ context.Context, _ string) ([]*client.WorkItemSummary, error) {
 			called = true
 
-			return []*client.WorkItem{{ID: 1}}, nil
+			return []*client.WorkItemSummary{{ID: 1}}, nil
 		},
 	}
 

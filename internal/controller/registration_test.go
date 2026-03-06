@@ -14,11 +14,11 @@ func TestRegisterAllTools(t *testing.T) {
 		GetWorkItemFn: func(_ context.Context, _ string, id int) (*client.WorkItem, error) {
 			return &client.WorkItem{ID: id, Title: "Test"}, nil
 		},
-		ListWorkItemsFn: func(_ context.Context, _ string, _ string) ([]*client.WorkItem, error) {
-			return []*client.WorkItem{{ID: 1}}, nil
+		ListWorkItemsFn: func(_ context.Context, _ string, _ string) ([]*client.WorkItemSummary, error) {
+			return []*client.WorkItemSummary{{ID: 1}}, nil
 		},
-		ListMyWorkItemsFn: func(_ context.Context, _ string) ([]*client.WorkItem, error) {
-			return []*client.WorkItem{{ID: 1}}, nil
+		ListMyWorkItemsFn: func(_ context.Context, _ string) ([]*client.WorkItemSummary, error) {
+			return []*client.WorkItemSummary{{ID: 1}}, nil
 		},
 		CreateWorkItemFn: func(
 			_ context.Context, _, _, _ string, _ client.CreateOptions,

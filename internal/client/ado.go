@@ -61,6 +61,22 @@ type WorkItem struct {
 	URL                string  `json:"url"`
 }
 
+// WorkItemSummary is a lightweight representation for list operations.
+// Excludes large text fields (description, acceptance criteria, repro steps).
+type WorkItemSummary struct {
+	ID            int     `json:"id"`
+	Title         string  `json:"title"`
+	State         string  `json:"state"`
+	Type          string  `json:"type"`
+	AssignedTo    string  `json:"assigned_to"`
+	Tags          string  `json:"tags"`
+	Priority      int     `json:"priority,omitempty"`
+	StoryPoints   float64 `json:"story_points,omitempty"`
+	AreaPath      string  `json:"area_path,omitempty"`
+	IterationPath string  `json:"iteration_path,omitempty"`
+	ParentID      int     `json:"parent_id,omitempty"`
+}
+
 // CreateOptions holds optional fields for creating a work item.
 type CreateOptions struct {
 	Description      string
@@ -89,8 +105,8 @@ type UpdateOptions struct {
 // the mock implementation is used in unit tests.
 type ADOClient interface {
 	GetWorkItem(ctx context.Context, project string, id int) (*WorkItem, error)
-	ListWorkItems(ctx context.Context, project string, wiql string) ([]*WorkItem, error)
-	ListMyWorkItems(ctx context.Context, project string) ([]*WorkItem, error)
+	ListWorkItems(ctx context.Context, project string, wiql string) ([]*WorkItemSummary, error)
+	ListMyWorkItems(ctx context.Context, project string) ([]*WorkItemSummary, error)
 	CreateWorkItem(ctx context.Context, project, workItemType, title string, opts CreateOptions) (*WorkItem, error)
 	UpdateWorkItem(ctx context.Context, project string, id int, opts UpdateOptions) (*WorkItem, error)
 	AddComment(ctx context.Context, project string, id int, text string) error
@@ -141,7 +157,7 @@ func (c *RealADOClient) GetWorkItem(ctx context.Context, project string, id int)
 }
 
 // ListWorkItems runs a WIQL query and returns matching work items.
-func (c *RealADOClient) ListWorkItems(ctx context.Context, project, wiql string) ([]*WorkItem, error) {
+func (c *RealADOClient) ListWorkItems(ctx context.Context, project, wiql string) ([]*WorkItemSummary, error) {
 	result, err := c.wit.QueryByWiql(ctx, workitemtracking.QueryByWiqlArgs{
 		Wiql:    &workitemtracking.Wiql{Query: &wiql},
 		Project: &project,
@@ -150,11 +166,11 @@ func (c *RealADOClient) ListWorkItems(ctx context.Context, project, wiql string)
 		return nil, fmt.Errorf("WIQL query: %w", err)
 	}
 
-	return c.fetchByRefs(ctx, project, result.WorkItems)
+	return c.fetchSummariesByRefs(ctx, project, result.WorkItems)
 }
 
 // ListMyWorkItems returns active work items assigned to the authenticated user.
-func (c *RealADOClient) ListMyWorkItems(ctx context.Context, project string) ([]*WorkItem, error) {
+func (c *RealADOClient) ListMyWorkItems(ctx context.Context, project string) ([]*WorkItemSummary, error) {
 	wiql := "SELECT [System.Id] FROM WorkItems WHERE [System.AssignedTo] = @Me " +
 		"AND [System.State] NOT IN ('Done','Closed','Resolved') " +
 		"ORDER BY [System.ChangedDate] DESC"
@@ -292,6 +308,47 @@ func (c *RealADOClient) fetchByRefs(
 	return result, nil
 }
 
+// fetchSummariesByRefs retrieves work item summaries (without large text fields) by batch.
+func (c *RealADOClient) fetchSummariesByRefs(
+	ctx context.Context, project string, refs *[]workitemtracking.WorkItemReference,
+) ([]*WorkItemSummary, error) {
+	if refs == nil || len(*refs) == 0 {
+		return nil, nil
+	}
+
+	ids := make([]int, len(*refs))
+	for i, ref := range *refs {
+		ids[i] = *ref.Id
+	}
+
+	// Only fetch essential fields for summaries (no description, acceptance criteria, repro steps)
+	fields := []string{
+		"System.Id", "System.Title", "System.State", "System.WorkItemType",
+		"System.AssignedTo", "System.Tags",
+		"System.AreaPath", "System.IterationPath", "System.Parent",
+		"Microsoft.VSTS.Common.Priority",
+		"Microsoft.VSTS.Scheduling.StoryPoints",
+	}
+
+	items, err := c.wit.GetWorkItemsBatch(ctx, workitemtracking.GetWorkItemsBatchArgs{
+		WorkItemGetRequest: &workitemtracking.WorkItemBatchGetRequest{
+			Ids:    &ids,
+			Fields: &fields,
+		},
+		Project: &project,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("batch fetch work items: %w", err)
+	}
+
+	result := make([]*WorkItemSummary, len(*items))
+	for i, item := range *items {
+		result[i] = toWorkItemSummary(&item)
+	}
+
+	return result, nil
+}
+
 // toWorkItem maps an ADO API WorkItem to our slim WorkItem type.
 func toWorkItem(item *workitemtracking.WorkItem) *WorkItem {
 	if item == nil || item.Fields == nil {
@@ -326,6 +383,34 @@ func toWorkItem(item *workitemtracking.WorkItem) *WorkItem {
 	}
 
 	return wi
+}
+
+// toWorkItemSummary maps an ADO API WorkItem to our lightweight WorkItemSummary type.
+// Excludes large text fields like description, acceptance criteria, and repro steps.
+func toWorkItemSummary(item *workitemtracking.WorkItem) *WorkItemSummary {
+	if item == nil || item.Fields == nil {
+		return &WorkItemSummary{}
+	}
+
+	f := item.Fields
+
+	summary := &WorkItemSummary{
+		Title:         fieldString(f, "System.Title"),
+		State:         fieldString(f, "System.State"),
+		Type:          fieldString(f, "System.WorkItemType"),
+		Tags:          fieldString(f, "System.Tags"),
+		AreaPath:      fieldString(f, "System.AreaPath"),
+		IterationPath: fieldString(f, "System.IterationPath"),
+		Priority:      fieldInt(f, "Microsoft.VSTS.Common.Priority"),
+		StoryPoints:   fieldFloat(f, "Microsoft.VSTS.Scheduling.StoryPoints"),
+		ParentID:      extractParentID(f),
+		AssignedTo:    extractAssignedTo(f),
+	}
+	if item.Id != nil {
+		summary.ID = *item.Id
+	}
+
+	return summary
 }
 
 // fieldString extracts a string value from the ADO fields map.
