@@ -93,6 +93,75 @@ azure-devops-mcp
 
 The server runs over stdio and follows the [Model Context Protocol](https://modelcontextprotocol.io) specification.
 
+### Configuring MCP Clients
+
+#### Claude Desktop
+
+Add to your Claude Desktop configuration file:
+
+**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "azure-devops": {
+      "command": "/usr/local/bin/azure-devops-mcp",
+      "env": {
+        "AZURE_DEVOPS_ORG_URL": "https://dev.azure.com/your-org",
+        "AZURE_DEVOPS_PAT": "your-personal-access-token",
+        "AZURE_DEVOPS_PROJECT": "your-project-name"
+      }
+    }
+  }
+}
+```
+
+#### Cline (VS Code Extension)
+
+Add to your Cline MCP settings file:
+
+**macOS/Linux**: `~/.config/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
+**Windows**: `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`
+
+```json
+{
+  "mcpServers": {
+    "azure-devops": {
+      "command": "/usr/local/bin/azure-devops-mcp",
+      "env": {
+        "AZURE_DEVOPS_ORG_URL": "https://dev.azure.com/your-org",
+        "AZURE_DEVOPS_PAT": "your-personal-access-token",
+        "AZURE_DEVOPS_PROJECT": "your-project-name"
+      }
+    }
+  }
+}
+```
+
+#### OpenCode
+
+Add to your OpenCode MCP configuration:
+
+**macOS/Linux**: `~/.config/opencode/mcp.json`
+
+```json
+{
+  "mcpServers": {
+    "azure-devops": {
+      "command": "/usr/local/bin/azure-devops-mcp",
+      "env": {
+        "AZURE_DEVOPS_ORG_URL": "https://dev.azure.com/your-org",
+        "AZURE_DEVOPS_PAT": "your-personal-access-token",
+        "AZURE_DEVOPS_PROJECT": "your-project-name"
+      }
+    }
+  }
+}
+```
+
+**Note**: After adding the configuration, restart your MCP client for the changes to take effect.
+
 ### Available Tools
 
 - `get_work_item` - Fetch a single work item by ID
