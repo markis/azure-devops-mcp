@@ -1,0 +1,135 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [main]
+  release:
+    types: [created]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Binaries
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          # macOS
+          - goos: darwin
+            goarch: amd64
+            output: azure-devops-mcp-darwin-amd64
+          - goos: darwin
+            goarch: arm64
+            output: azure-devops-mcp-darwin-arm64
+          # Linux
+          - goos: linux
+            goarch: amd64
+            output: azure-devops-mcp-linux-amd64
+          - goos: linux
+            goarch: arm64
+            output: azure-devops-mcp-linux-arm64
+          # Windows
+          - goos: windows
+            goarch: amd64
+            output: azure-devops-mcp-windows-amd64.exe
+          - goos: windows
+            goarch: arm64
+            output: azure-devops-mcp-windows-arm64.exe
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          go build -ldflags="-s -w" -o dist/${{ matrix.output }} ./cmd/azure-devops-mcp
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.output }}
+          path: dist/${{ matrix.output }}
+          retention-days: 7
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/
+
+      - name: Bump version and push tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          default_bump: patch
+          release_branches: main
+          create_annotated_tag: true
+
+      - name: Create GitHub Release with binaries
+        if: steps.tag_version.outputs.new_tag
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ steps.tag_version.outputs.new_tag }}
+          name: Release ${{ steps.tag_version.outputs.new_tag }}
+          body: |
+            ${{ steps.tag_version.outputs.changelog }}
+
+            ## Installation
+
+            Download the binary for your platform:
+
+            ### macOS
+            ```bash
+            # Intel Mac
+            curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.tag_version.outputs.new_tag }}/azure-devops-mcp-darwin-amd64
+            chmod +x azure-devops-mcp-darwin-amd64
+            mv azure-devops-mcp-darwin-amd64 /usr/local/bin/azure-devops-mcp
+
+            # Apple Silicon (M1/M2/M3)
+            curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.tag_version.outputs.new_tag }}/azure-devops-mcp-darwin-arm64
+            chmod +x azure-devops-mcp-darwin-arm64
+            mv azure-devops-mcp-darwin-arm64 /usr/local/bin/azure-devops-mcp
+            ```
+
+            ### Linux
+            ```bash
+            # AMD64
+            curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.tag_version.outputs.new_tag }}/azure-devops-mcp-linux-amd64
+            chmod +x azure-devops-mcp-linux-amd64
+            sudo mv azure-devops-mcp-linux-amd64 /usr/local/bin/azure-devops-mcp
+
+            # ARM64
+            curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.tag_version.outputs.new_tag }}/azure-devops-mcp-linux-arm64
+            chmod +x azure-devops-mcp-linux-arm64
+            sudo mv azure-devops-mcp-linux-arm64 /usr/local/bin/azure-devops-mcp
+            ```
+
+            ### Windows
+            Download the `.exe` file for your architecture and add it to your PATH.
+
+          artifacts: "dist/*/*"
+          artifactContentType: application/octet-stream
+          generateReleaseNotes: true
+          draft: false
+          prerelease: false
