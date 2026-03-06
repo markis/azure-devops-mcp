@@ -19,9 +19,11 @@ func main() {
 	if cfg.OrgURL == "" {
 		log.Fatal("AZURE_DEVOPS_ORG_URL is required")
 	}
+
 	if cfg.PAT == "" {
 		log.Fatal("AZURE_DEVOPS_PAT is required")
 	}
+
 	if cfg.Project == "" {
 		log.Fatal("AZURE_DEVOPS_PROJECT is required")
 	}

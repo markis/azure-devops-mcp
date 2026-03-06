@@ -1,3 +1,5 @@
+// Package controller wires the MCP server, registers all tools, and starts
+// the stdio transport. It is the only package that depends on both client and tools.
 package controller
 
 import (
@@ -36,14 +38,16 @@ func Run(ctx context.Context, cfg Config) error {
 		ID      int    `json:"id"`
 		Project string `json:"project,omitempty"`
 	}
+
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "get_work_item",
 		Description: "Fetch a single Azure DevOps work item by numeric ID.",
-	}, func(ctx context.Context, req *mcp.CallToolRequest, in getWorkItemInput) (*mcp.CallToolResult, any, error) {
+	}, func(ctx context.Context, _ *mcp.CallToolRequest, in getWorkItemInput) (*mcp.CallToolResult, any, error) {
 		text, err := h.GetWorkItem(ctx, in.ID, in.Project)
 		if err != nil {
 			return nil, nil, err
 		}
+
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: text}},
 		}, nil, nil
@@ -54,14 +58,16 @@ func Run(ctx context.Context, cfg Config) error {
 		Query   string `json:"query"`
 		Project string `json:"project,omitempty"`
 	}
+
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "list_work_items",
 		Description: "Run a WIQL query and return matching Azure DevOps work items.",
-	}, func(ctx context.Context, req *mcp.CallToolRequest, in listWorkItemsInput) (*mcp.CallToolResult, any, error) {
+	}, func(ctx context.Context, _ *mcp.CallToolRequest, in listWorkItemsInput) (*mcp.CallToolResult, any, error) {
 		text, err := h.ListWorkItems(ctx, in.Query, in.Project)
 		if err != nil {
 			return nil, nil, err
 		}
+
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: text}},
 		}, nil, nil
@@ -71,14 +77,16 @@ func Run(ctx context.Context, cfg Config) error {
 	type listMyWorkItemsInput struct {
 		Project string `json:"project,omitempty"`
 	}
+
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "list_my_work_items",
 		Description: "Return active work items assigned to the authenticated user.",
-	}, func(ctx context.Context, req *mcp.CallToolRequest, in listMyWorkItemsInput) (*mcp.CallToolResult, any, error) {
+	}, func(ctx context.Context, _ *mcp.CallToolRequest, in listMyWorkItemsInput) (*mcp.CallToolResult, any, error) {
 		text, err := h.ListMyWorkItems(ctx, in.Project)
 		if err != nil {
 			return nil, nil, err
 		}
+
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: text}},
 		}, nil, nil
@@ -93,19 +101,22 @@ func Run(ctx context.Context, cfg Config) error {
 		Tags        string `json:"tags,omitempty"`
 		Project     string `json:"project,omitempty"`
 	}
+
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "create_work_item",
 		Description: "Create a new Azure DevOps work item.",
-	}, func(ctx context.Context, req *mcp.CallToolRequest, in createWorkItemInput) (*mcp.CallToolResult, any, error) {
+	}, func(ctx context.Context, _ *mcp.CallToolRequest, in createWorkItemInput) (*mcp.CallToolResult, any, error) {
 		opts := client.CreateOptions{
 			Description: in.Description,
 			AssignedTo:  in.AssignedTo,
 			Tags:        in.Tags,
 		}
+
 		text, err := h.CreateWorkItem(ctx, in.Type, in.Title, opts, in.Project)
 		if err != nil {
 			return nil, nil, err
 		}
+
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: text}},
 		}, nil, nil
@@ -120,20 +131,23 @@ func Run(ctx context.Context, cfg Config) error {
 		Description string `json:"description,omitempty"`
 		Project     string `json:"project,omitempty"`
 	}
+
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "update_work_item",
 		Description: "Update fields on an existing Azure DevOps work item.",
-	}, func(ctx context.Context, req *mcp.CallToolRequest, in updateWorkItemInput) (*mcp.CallToolResult, any, error) {
+	}, func(ctx context.Context, _ *mcp.CallToolRequest, in updateWorkItemInput) (*mcp.CallToolResult, any, error) {
 		opts := client.UpdateOptions{
 			Title:       in.Title,
 			State:       in.State,
 			AssignedTo:  in.AssignedTo,
 			Description: in.Description,
 		}
+
 		text, err := h.UpdateWorkItem(ctx, in.ID, opts, in.Project)
 		if err != nil {
 			return nil, nil, err
 		}
+
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: text}},
 		}, nil, nil
@@ -145,14 +159,16 @@ func Run(ctx context.Context, cfg Config) error {
 		Text    string `json:"text"`
 		Project string `json:"project,omitempty"`
 	}
+
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "add_comment",
 		Description: "Add a comment to an Azure DevOps work item.",
-	}, func(ctx context.Context, req *mcp.CallToolRequest, in addCommentInput) (*mcp.CallToolResult, any, error) {
+	}, func(ctx context.Context, _ *mcp.CallToolRequest, in addCommentInput) (*mcp.CallToolResult, any, error) {
 		text, err := h.AddComment(ctx, in.ID, in.Text, in.Project)
 		if err != nil {
 			return nil, nil, err
 		}
+
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: text}},
 		}, nil, nil

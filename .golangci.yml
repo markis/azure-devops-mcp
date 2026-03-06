@@ -1,4 +1,27 @@
 version: "2"
 
+formatters:
+  enable:
+    - gofumpt
+
 linters:
   default: all
+  disable:
+    - depguard      # requires an explicit allow-list to be useful; not configured for this project
+    - exhaustruct   # impractical for SDK struct literals (optional fields would all need setting)
+    - funlen        # toWorkItem is long but clear; cyclop already enforces complexity
+    - gochecknoglobals # htmlToMD converter is intentionally package-level
+    - lll           # WIQL strings make line-length limits impractical
+    - nlreturn      # stylistic preference we don't share
+    - noinlineerr   # too pedantic for this codebase
+    - paralleltest  # no benefit running these tests in parallel
+    - tagliatelle   # we need snake_case JSON tags to match ADO API conventions
+    - varnamelen    # short names are idiomatic Go
+    - wrapcheck     # errors are already wrapped in the client layer; double-wrapping is noise
+    - wsl           # deprecated; replaced by wsl_v5
+
+  settings:
+    wsl_v5:
+      allow-first-in-block: true
+      allow-whole-block: false
+      branch-max-lines: 2

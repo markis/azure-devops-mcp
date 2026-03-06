@@ -1,3 +1,4 @@
+// Package tools implements MCP tool handlers for Azure DevOps work items.
 package tools
 
 import (
@@ -19,29 +20,13 @@ func NewHandlers(ado client.ADOClient, defaultProject string) *Handlers {
 	return &Handlers{ado: ado, defaultProject: defaultProject}
 }
 
-// project returns the override project if set, otherwise the default.
-func (h *Handlers) project(override string) string {
-	if override != "" {
-		return override
-	}
-	return h.defaultProject
-}
-
-// marshal serializes v to a JSON string, returning an error on failure.
-func marshal(v any) (string, error) {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return "", fmt.Errorf("serializing result: %w", err)
-	}
-	return string(b), nil
-}
-
 // GetWorkItem fetches a single work item by ID.
 func (h *Handlers) GetWorkItem(ctx context.Context, id int, project string) (string, error) {
 	wi, err := h.ado.GetWorkItem(ctx, h.project(project), id)
 	if err != nil {
 		return "", err
 	}
+
 	return marshal(wi)
 }
 
@@ -51,6 +36,7 @@ func (h *Handlers) ListWorkItems(ctx context.Context, wiql, project string) (str
 	if err != nil {
 		return "", err
 	}
+
 	return marshal(items)
 }
 
@@ -60,6 +46,7 @@ func (h *Handlers) ListMyWorkItems(ctx context.Context, project string) (string,
 	if err != nil {
 		return "", err
 	}
+
 	return marshal(items)
 }
 
@@ -69,6 +56,7 @@ func (h *Handlers) CreateWorkItem(ctx context.Context, workItemType, title strin
 	if err != nil {
 		return "", err
 	}
+
 	return marshal(wi)
 }
 
@@ -78,6 +66,7 @@ func (h *Handlers) UpdateWorkItem(ctx context.Context, id int, opts client.Updat
 	if err != nil {
 		return "", err
 	}
+
 	return marshal(wi)
 }
 
@@ -86,5 +75,25 @@ func (h *Handlers) AddComment(ctx context.Context, id int, text, project string)
 	if err := h.ado.AddComment(ctx, h.project(project), id, text); err != nil {
 		return "", err
 	}
+
 	return fmt.Sprintf(`{"message":"Comment added to work item %d"}`, id), nil
+}
+
+// project returns the override project if set, otherwise the default.
+func (h *Handlers) project(override string) string {
+	if override != "" {
+		return override
+	}
+
+	return h.defaultProject
+}
+
+// marshal serializes v to a JSON string, returning an error on failure.
+func marshal(v any) (string, error) {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return "", fmt.Errorf("serializing result: %w", err)
+	}
+
+	return string(b), nil
 }
