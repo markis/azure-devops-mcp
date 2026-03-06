@@ -10,7 +10,7 @@ linters:
     - depguard # requires an explicit allow-list to be useful; not configured for this project
     - exhaustruct # impractical for SDK struct literals (optional fields would all need setting)
     - gochecknoglobals # htmlToMD converter is intentionally package-level
-    - modernize # ptr() helper is more readable than new() for string literals
+    - modernize # incorrectly suggests replacing ptr(value) with new(type) - not equivalent
     - nlreturn # stylistic preference we don't share
     - noinlineerr # too pedantic for this codebase
     - paralleltest # no benefit running these tests in parallel
