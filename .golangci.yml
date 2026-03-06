@@ -19,7 +19,7 @@ linters:
     - wrapcheck # errors are already wrapped in the client layer; double-wrapping is noise
     - wsl # deprecated; replaced by wsl_v5
 
-settings:
+linters-settings:
   lll:
     line-length: 120
   wsl_v5:
