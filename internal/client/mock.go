@@ -31,12 +31,16 @@ func (m *MockADOClient) ListMyWorkItems(ctx context.Context, project string) ([]
 }
 
 // CreateWorkItem delegates to CreateWorkItemFn.
-func (m *MockADOClient) CreateWorkItem(ctx context.Context, project, workItemType, title string, opts CreateOptions) (*WorkItem, error) {
+func (m *MockADOClient) CreateWorkItem(
+	ctx context.Context, project, workItemType, title string, opts CreateOptions,
+) (*WorkItem, error) {
 	return m.CreateWorkItemFn(ctx, project, workItemType, title, opts)
 }
 
 // UpdateWorkItem delegates to UpdateWorkItemFn.
-func (m *MockADOClient) UpdateWorkItem(ctx context.Context, project string, id int, opts UpdateOptions) (*WorkItem, error) {
+func (m *MockADOClient) UpdateWorkItem(
+	ctx context.Context, project string, id int, opts UpdateOptions,
+) (*WorkItem, error) {
 	return m.UpdateWorkItemFn(ctx, project, id, opts)
 }
 

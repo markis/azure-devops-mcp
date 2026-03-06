@@ -27,13 +27,27 @@ func Run(ctx context.Context, cfg Config) error {
 	}
 
 	h := tools.NewHandlers(ado, cfg.Project)
+	srv := createServer()
+	registerGetWorkItem(srv, h)
+	registerListWorkItems(srv, h)
+	registerListMyWorkItems(srv, h)
+	registerCreateWorkItem(srv, h)
+	registerUpdateWorkItem(srv, h)
+	registerAddComment(srv, h)
 
-	srv := mcp.NewServer(&mcp.Implementation{
+	return srv.Run(ctx, &mcp.StdioTransport{})
+}
+
+// createServer creates and configures the MCP server instance.
+func createServer() *mcp.Server {
+	return mcp.NewServer(&mcp.Implementation{
 		Name:    "azure-devops-mcp",
 		Version: "0.1.0",
 	}, nil)
+}
 
-	// get_work_item
+// registerGetWorkItem registers the get_work_item tool.
+func registerGetWorkItem(srv *mcp.Server, h *tools.Handlers) {
 	type getWorkItemInput struct {
 		ID      int    `json:"id"`
 		Project string `json:"project,omitempty"`
@@ -52,8 +66,10 @@ func Run(ctx context.Context, cfg Config) error {
 			Content: []mcp.Content{&mcp.TextContent{Text: text}},
 		}, nil, nil
 	})
+}
 
-	// list_work_items
+// registerListWorkItems registers the list_work_items tool.
+func registerListWorkItems(srv *mcp.Server, h *tools.Handlers) {
 	type listWorkItemsInput struct {
 		Query   string `json:"query"`
 		Project string `json:"project,omitempty"`
@@ -72,8 +88,10 @@ func Run(ctx context.Context, cfg Config) error {
 			Content: []mcp.Content{&mcp.TextContent{Text: text}},
 		}, nil, nil
 	})
+}
 
-	// list_my_work_items
+// registerListMyWorkItems registers the list_my_work_items tool.
+func registerListMyWorkItems(srv *mcp.Server, h *tools.Handlers) {
 	type listMyWorkItemsInput struct {
 		Project string `json:"project,omitempty"`
 	}
@@ -91,8 +109,10 @@ func Run(ctx context.Context, cfg Config) error {
 			Content: []mcp.Content{&mcp.TextContent{Text: text}},
 		}, nil, nil
 	})
+}
 
-	// create_work_item
+// registerCreateWorkItem registers the create_work_item tool.
+func registerCreateWorkItem(srv *mcp.Server, h *tools.Handlers) {
 	type createWorkItemInput struct {
 		Type             string  `json:"type"`
 		Title            string  `json:"title"`
@@ -127,8 +147,10 @@ func Run(ctx context.Context, cfg Config) error {
 			Content: []mcp.Content{&mcp.TextContent{Text: text}},
 		}, nil, nil
 	})
+}
 
-	// update_work_item
+// registerUpdateWorkItem registers the update_work_item tool.
+func registerUpdateWorkItem(srv *mcp.Server, h *tools.Handlers) {
 	type updateWorkItemInput struct {
 		ID                 int     `json:"id"`
 		Title              string  `json:"title,omitempty"`
@@ -166,8 +188,10 @@ func Run(ctx context.Context, cfg Config) error {
 			Content: []mcp.Content{&mcp.TextContent{Text: text}},
 		}, nil, nil
 	})
+}
 
-	// add_comment
+// registerAddComment registers the add_comment tool.
+func registerAddComment(srv *mcp.Server, h *tools.Handlers) {
 	type addCommentInput struct {
 		ID      int    `json:"id"`
 		Text    string `json:"text"`
@@ -187,6 +211,4 @@ func Run(ctx context.Context, cfg Config) error {
 			Content: []mcp.Content{&mcp.TextContent{Text: text}},
 		}, nil, nil
 	})
-
-	return srv.Run(ctx, &mcp.StdioTransport{})
 }

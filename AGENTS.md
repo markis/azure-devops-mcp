@@ -279,9 +279,11 @@ func fieldInt(f *map[string]any, key string) int { ... }
 **Config**: `.golangci.yml` with `default: all` linters enabled
 
 **Key disabled linters** (with rationale in config):
-- `depguard`, `exhaustruct`, `funlen`, `gochecknoglobals`, `lll`, `nlreturn`, `noinlineerr`, `paralleltest`, `tagliatelle`, `varnamelen`, `wrapcheck`, `wsl`
+- `depguard`, `exhaustruct`, `funlen`, `gochecknoglobals`, `nlreturn`, `noinlineerr`, `paralleltest`, `tagliatelle`, `varnamelen`, `wrapcheck`, `wsl`
 
-**Enabled formatter**: `gofumpt`
+**Key enabled linters with settings**:
+- `lll` - Line length enforced at 120 characters
+- `gofumpt` - Stricter formatter than gofmt
 
 ## JSON and API Conventions
 

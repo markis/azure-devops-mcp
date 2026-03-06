@@ -101,7 +101,9 @@ func TestListMyWorkItems_ReturnsAssignedItems(t *testing.T) {
 
 func TestCreateWorkItem_CreatesAndReturnsItem(t *testing.T) {
 	mock := &client.MockADOClient{
-		CreateWorkItemFn: func(_ context.Context, _, workItemType, title string, _ client.CreateOptions) (*client.WorkItem, error) {
+		CreateWorkItemFn: func(
+			_ context.Context, _, workItemType, title string, _ client.CreateOptions,
+		) (*client.WorkItem, error) {
 			if title != "New bug" {
 				t.Fatalf("expected title 'New bug', got %q", title)
 			}

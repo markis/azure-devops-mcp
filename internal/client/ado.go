@@ -20,7 +20,10 @@ var mdOpts = &md.Options{
 var htmlToMD = md.NewConverter("", true, mdOpts)
 
 // ErrNoFieldsToUpdate is returned when UpdateWorkItem is called with no fields set.
-var ErrNoFieldsToUpdate = errors.New("no fields to update: provide at least one of title, state, assigned_to, description, acceptance_criteria, story_points, original_estimate, or size")
+var ErrNoFieldsToUpdate = errors.New(
+	"no fields to update: provide at least one of title, state, assigned_to, " +
+		"description, acceptance_criteria, story_points, original_estimate, or size",
+)
 
 // WorkItem is a slim representation of an Azure DevOps work item.
 // Only fields Claude needs are included — not the full API response.
@@ -138,20 +141,26 @@ func (c *RealADOClient) ListWorkItems(ctx context.Context, project, wiql string)
 
 // ListMyWorkItems returns active work items assigned to the authenticated user.
 func (c *RealADOClient) ListMyWorkItems(ctx context.Context, project string) ([]*WorkItem, error) {
-	wiql := "SELECT [System.Id] FROM WorkItems WHERE [System.AssignedTo] = @Me AND [System.State] NOT IN ('Done','Closed','Resolved') ORDER BY [System.ChangedDate] DESC"
+	wiql := "SELECT [System.Id] FROM WorkItems WHERE [System.AssignedTo] = @Me " +
+		"AND [System.State] NOT IN ('Done','Closed','Resolved') " +
+		"ORDER BY [System.ChangedDate] DESC"
 
 	return c.ListWorkItems(ctx, project, wiql)
 }
 
 // CreateWorkItem creates a new work item of the given type.
-func (c *RealADOClient) CreateWorkItem(ctx context.Context, project, workItemType, title string, opts CreateOptions) (*WorkItem, error) {
+func (c *RealADOClient) CreateWorkItem(
+	ctx context.Context, project, workItemType, title string, opts CreateOptions,
+) (*WorkItem, error) {
 	add := webapi.OperationValues.Add
 
 	ops := []webapi.JsonPatchOperation{
 		{Op: &add, Path: ptr("/fields/System.Title"), Value: title},
 	}
 	if opts.Description != "" {
-		ops = append(ops, webapi.JsonPatchOperation{Op: &add, Path: ptr("/fields/System.Description"), Value: opts.Description})
+		ops = append(ops, webapi.JsonPatchOperation{
+			Op: &add, Path: ptr("/fields/System.Description"), Value: opts.Description,
+		})
 	}
 
 	if opts.AssignedTo != "" {
@@ -163,11 +172,17 @@ func (c *RealADOClient) CreateWorkItem(ctx context.Context, project, workItemTyp
 	}
 
 	if opts.StoryPoints != 0 {
-		ops = append(ops, webapi.JsonPatchOperation{Op: &add, Path: ptr("/fields/Microsoft.VSTS.Scheduling.StoryPoints"), Value: opts.StoryPoints})
+		ops = append(ops, webapi.JsonPatchOperation{
+			Op: &add, Path: ptr("/fields/Microsoft.VSTS.Scheduling.StoryPoints"), Value: opts.StoryPoints,
+		})
 	}
 
 	if opts.OriginalEstimate != 0 {
-		ops = append(ops, webapi.JsonPatchOperation{Op: &add, Path: ptr("/fields/Microsoft.VSTS.Scheduling.OriginalEstimate"), Value: opts.OriginalEstimate})
+		ops = append(ops, webapi.JsonPatchOperation{
+			Op:    &add,
+			Path:  ptr("/fields/Microsoft.VSTS.Scheduling.OriginalEstimate"),
+			Value: opts.OriginalEstimate,
+		})
 	}
 
 	if opts.Size != "" {
@@ -188,7 +203,9 @@ func (c *RealADOClient) CreateWorkItem(ctx context.Context, project, workItemTyp
 
 // UpdateWorkItem patches fields on an existing work item.
 // Returns ErrNoFieldsToUpdate if no fields are provided.
-func (c *RealADOClient) UpdateWorkItem(ctx context.Context, project string, id int, opts UpdateOptions) (*WorkItem, error) {
+func (c *RealADOClient) UpdateWorkItem(
+	ctx context.Context, project string, id int, opts UpdateOptions,
+) (*WorkItem, error) {
 	ops := buildUpdateOps(opts)
 	if len(ops) == 0 {
 		return nil, ErrNoFieldsToUpdate
@@ -218,7 +235,9 @@ func (c *RealADOClient) AddComment(ctx context.Context, project string, id int, 
 }
 
 // fetchByRefs fetches full work item details for a list of WorkItemReference.
-func (c *RealADOClient) fetchByRefs(ctx context.Context, project string, refs *[]workitemtracking.WorkItemReference) ([]*WorkItem, error) {
+func (c *RealADOClient) fetchByRefs(
+	ctx context.Context, project string, refs *[]workitemtracking.WorkItemReference,
+) ([]*WorkItem, error) {
 	if refs == nil || len(*refs) == 0 {
 		return nil, nil
 	}
@@ -336,27 +355,45 @@ func buildUpdateOps(opts UpdateOptions) []webapi.JsonPatchOperation {
 	}
 
 	if opts.AssignedTo != "" {
-		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: ptr("/fields/System.AssignedTo"), Value: opts.AssignedTo})
+		ops = append(ops, webapi.JsonPatchOperation{
+			Op: &replace, Path: ptr("/fields/System.AssignedTo"), Value: opts.AssignedTo,
+		})
 	}
 
 	if opts.Description != "" {
-		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: ptr("/fields/System.Description"), Value: opts.Description})
+		ops = append(ops, webapi.JsonPatchOperation{
+			Op: &replace, Path: ptr("/fields/System.Description"), Value: opts.Description,
+		})
 	}
 
 	if opts.AcceptanceCriteria != "" {
-		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: ptr("/fields/Microsoft.VSTS.Common.AcceptanceCriteria"), Value: opts.AcceptanceCriteria})
+		ops = append(ops, webapi.JsonPatchOperation{
+			Op:    &replace,
+			Path:  ptr("/fields/Microsoft.VSTS.Common.AcceptanceCriteria"),
+			Value: opts.AcceptanceCriteria,
+		})
 	}
 
 	if opts.StoryPoints != 0 {
-		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: ptr("/fields/Microsoft.VSTS.Scheduling.StoryPoints"), Value: opts.StoryPoints})
+		ops = append(ops, webapi.JsonPatchOperation{
+			Op:    &replace,
+			Path:  ptr("/fields/Microsoft.VSTS.Scheduling.StoryPoints"),
+			Value: opts.StoryPoints,
+		})
 	}
 
 	if opts.OriginalEstimate != 0 {
-		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: ptr("/fields/Microsoft.VSTS.Scheduling.OriginalEstimate"), Value: opts.OriginalEstimate})
+		ops = append(ops, webapi.JsonPatchOperation{
+			Op:    &replace,
+			Path:  ptr("/fields/Microsoft.VSTS.Scheduling.OriginalEstimate"),
+			Value: opts.OriginalEstimate,
+		})
 	}
 
 	if opts.Size != "" {
-		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: ptr("/fields/Custom.Teeshirtsizing"), Value: opts.Size})
+		ops = append(ops, webapi.JsonPatchOperation{
+			Op: &replace, Path: ptr("/fields/Custom.Teeshirtsizing"), Value: opts.Size,
+		})
 	}
 
 	return ops

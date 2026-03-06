@@ -51,7 +51,9 @@ func (h *Handlers) ListMyWorkItems(ctx context.Context, project string) (string,
 }
 
 // CreateWorkItem creates a new work item of the given type with the given title.
-func (h *Handlers) CreateWorkItem(ctx context.Context, workItemType, title string, opts client.CreateOptions, project string) (string, error) {
+func (h *Handlers) CreateWorkItem(
+	ctx context.Context, workItemType, title string, opts client.CreateOptions, project string,
+) (string, error) {
 	wi, err := h.ado.CreateWorkItem(ctx, h.project(project), workItemType, title, opts)
 	if err != nil {
 		return "", err
@@ -61,7 +63,9 @@ func (h *Handlers) CreateWorkItem(ctx context.Context, workItemType, title strin
 }
 
 // UpdateWorkItem patches fields on an existing work item.
-func (h *Handlers) UpdateWorkItem(ctx context.Context, id int, opts client.UpdateOptions, project string) (string, error) {
+func (h *Handlers) UpdateWorkItem(
+	ctx context.Context, id int, opts client.UpdateOptions, project string,
+) (string, error) {
 	wi, err := h.ado.UpdateWorkItem(ctx, h.project(project), id, opts)
 	if err != nil {
 		return "", err
