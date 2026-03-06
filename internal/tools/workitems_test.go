@@ -160,6 +160,82 @@ func TestUpdateWorkItem_UpdatesAndReturnsItem(t *testing.T) {
 	}
 }
 
+func TestGetWorkItem_ReturnsAcceptanceCriteria(t *testing.T) {
+	mock := &client.MockADOClient{
+		GetWorkItemFn: func(_ context.Context, _ string, _ int) (*client.WorkItem, error) {
+			return &client.WorkItem{
+				ID:                 42,
+				Title:              "My story",
+				AcceptanceCriteria: "## AC\n- Does the thing",
+			}, nil
+		},
+	}
+
+	h := tools.NewHandlers(mock, "MyProject")
+
+	result, err := h.GetWorkItem(context.Background(), 42, "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var wi client.WorkItem
+	if err := json.Unmarshal([]byte(result), &wi); err != nil {
+		t.Fatalf("result not valid JSON: %v", err)
+	}
+
+	if wi.AcceptanceCriteria != "## AC\n- Does the thing" {
+		t.Errorf("expected acceptance criteria, got %q", wi.AcceptanceCriteria)
+	}
+}
+
+func TestGetWorkItem_ReturnsExtendedFields(t *testing.T) {
+	mock := &client.MockADOClient{
+		GetWorkItemFn: func(_ context.Context, _ string, _ int) (*client.WorkItem, error) {
+			return &client.WorkItem{
+				ID:            42,
+				Title:         "My story",
+				Priority:      2,
+				AreaPath:      "Access Analyzer\\Team A",
+				IterationPath: "Access Analyzer\\Sprint 10",
+				ReproSteps:    "1. Do thing\n2. See bug",
+				ParentID:      100,
+			}, nil
+		},
+	}
+
+	h := tools.NewHandlers(mock, "MyProject")
+
+	result, err := h.GetWorkItem(context.Background(), 42, "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var wi client.WorkItem
+	if err := json.Unmarshal([]byte(result), &wi); err != nil {
+		t.Fatalf("result not valid JSON: %v", err)
+	}
+
+	if wi.Priority != 2 {
+		t.Errorf("expected priority 2, got %d", wi.Priority)
+	}
+
+	if wi.AreaPath != "Access Analyzer\\Team A" {
+		t.Errorf("unexpected area path: %q", wi.AreaPath)
+	}
+
+	if wi.IterationPath != "Access Analyzer\\Sprint 10" {
+		t.Errorf("unexpected iteration path: %q", wi.IterationPath)
+	}
+
+	if wi.ReproSteps != "1. Do thing\n2. See bug" {
+		t.Errorf("unexpected repro steps: %q", wi.ReproSteps)
+	}
+
+	if wi.ParentID != 100 {
+		t.Errorf("expected parent ID 100, got %d", wi.ParentID)
+	}
+}
+
 func TestAddComment_PostsComment(t *testing.T) {
 	called := false
 	mock := &client.MockADOClient{

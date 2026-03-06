@@ -11,9 +11,13 @@ import (
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/workitemtracking"
 )
 
+var mdOpts = &md.Options{
+	CodeBlockStyle: "fenced",
+}
+
 // htmlToMD converts HTML strings returned by the ADO API to Markdown.
 // Created once at package init; safe for concurrent use.
-var htmlToMD = md.NewConverter("", true, nil)
+var htmlToMD = md.NewConverter("", true, mdOpts)
 
 // ErrNoFieldsToUpdate is returned when UpdateWorkItem is called with no fields set.
 var ErrNoFieldsToUpdate = errors.New("no fields to update: provide at least one of title, state, assigned_to, or description")
@@ -21,14 +25,20 @@ var ErrNoFieldsToUpdate = errors.New("no fields to update: provide at least one 
 // WorkItem is a slim representation of an Azure DevOps work item.
 // Only fields Claude needs are included — not the full API response.
 type WorkItem struct {
-	ID          int    `json:"id"`
-	Title       string `json:"title"`
-	State       string `json:"state"`
-	Type        string `json:"type"`
-	AssignedTo  string `json:"assigned_to"`
-	Description string `json:"description"`
-	Tags        string `json:"tags"`
-	URL         string `json:"url"`
+	ID                 int    `json:"id"`
+	Title              string `json:"title"`
+	State              string `json:"state"`
+	Type               string `json:"type"`
+	AssignedTo         string `json:"assigned_to"`
+	Description        string `json:"description"`
+	AcceptanceCriteria string `json:"acceptance_criteria,omitempty"`
+	ReproSteps         string `json:"repro_steps,omitempty"`
+	Tags               string `json:"tags"`
+	Priority           int    `json:"priority,omitempty"`
+	AreaPath           string `json:"area_path,omitempty"`
+	IterationPath      string `json:"iteration_path,omitempty"`
+	ParentID           int    `json:"parent_id,omitempty"`
+	URL                string `json:"url"`
 }
 
 // CreateOptions holds optional fields for creating a work item.
@@ -82,6 +92,10 @@ func (c *RealADOClient) GetWorkItem(ctx context.Context, project string, id int)
 		"System.Id", "System.Title", "System.State",
 		"System.WorkItemType", "System.AssignedTo",
 		"System.Description", "System.Tags",
+		"System.AreaPath", "System.IterationPath", "System.Parent",
+		"Microsoft.VSTS.Common.AcceptanceCriteria",
+		"Microsoft.VSTS.Common.Priority",
+		"Microsoft.VSTS.TCM.ReproSteps",
 	}
 
 	item, err := c.wit.GetWorkItem(ctx, workitemtracking.GetWorkItemArgs{
@@ -121,18 +135,18 @@ func (c *RealADOClient) CreateWorkItem(ctx context.Context, project, workItemTyp
 	add := webapi.OperationValues.Add
 
 	ops := []webapi.JsonPatchOperation{
-		{Op: &add, Path: strPtr("/fields/System.Title"), Value: title},
+		{Op: &add, Path: ptr("/fields/System.Title"), Value: title},
 	}
 	if opts.Description != "" {
-		ops = append(ops, webapi.JsonPatchOperation{Op: &add, Path: strPtr("/fields/System.Description"), Value: opts.Description})
+		ops = append(ops, webapi.JsonPatchOperation{Op: &add, Path: ptr("/fields/System.Description"), Value: opts.Description})
 	}
 
 	if opts.AssignedTo != "" {
-		ops = append(ops, webapi.JsonPatchOperation{Op: &add, Path: strPtr("/fields/System.AssignedTo"), Value: opts.AssignedTo})
+		ops = append(ops, webapi.JsonPatchOperation{Op: &add, Path: ptr("/fields/System.AssignedTo"), Value: opts.AssignedTo})
 	}
 
 	if opts.Tags != "" {
-		ops = append(ops, webapi.JsonPatchOperation{Op: &add, Path: strPtr("/fields/System.Tags"), Value: opts.Tags})
+		ops = append(ops, webapi.JsonPatchOperation{Op: &add, Path: ptr("/fields/System.Tags"), Value: opts.Tags})
 	}
 
 	item, err := c.wit.CreateWorkItem(ctx, workitemtracking.CreateWorkItemArgs{
@@ -154,19 +168,19 @@ func (c *RealADOClient) UpdateWorkItem(ctx context.Context, project string, id i
 
 	var ops []webapi.JsonPatchOperation
 	if opts.Title != "" {
-		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: strPtr("/fields/System.Title"), Value: opts.Title})
+		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: ptr("/fields/System.Title"), Value: opts.Title})
 	}
 
 	if opts.State != "" {
-		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: strPtr("/fields/System.State"), Value: opts.State})
+		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: ptr("/fields/System.State"), Value: opts.State})
 	}
 
 	if opts.AssignedTo != "" {
-		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: strPtr("/fields/System.AssignedTo"), Value: opts.AssignedTo})
+		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: ptr("/fields/System.AssignedTo"), Value: opts.AssignedTo})
 	}
 
 	if opts.Description != "" {
-		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: strPtr("/fields/System.Description"), Value: opts.Description})
+		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: ptr("/fields/System.Description"), Value: opts.Description})
 	}
 
 	if len(ops) == 0 {
@@ -207,7 +221,14 @@ func (c *RealADOClient) fetchByRefs(ctx context.Context, project string, refs *[
 		ids[i] = *ref.Id
 	}
 
-	fields := []string{"System.Id", "System.Title", "System.State", "System.WorkItemType", "System.AssignedTo", "System.Tags", "System.Description"}
+	fields := []string{
+		"System.Id", "System.Title", "System.State", "System.WorkItemType",
+		"System.AssignedTo", "System.Tags", "System.Description",
+		"System.AreaPath", "System.IterationPath", "System.Parent",
+		"Microsoft.VSTS.Common.AcceptanceCriteria",
+		"Microsoft.VSTS.Common.Priority",
+		"Microsoft.VSTS.TCM.ReproSteps",
+	}
 
 	items, err := c.wit.GetWorkItemsBatch(ctx, workitemtracking.GetWorkItemsBatchArgs{
 		WorkItemGetRequest: &workitemtracking.WorkItemBatchGetRequest{
@@ -237,12 +258,18 @@ func toWorkItem(item *workitemtracking.WorkItem) *WorkItem {
 	f := item.Fields
 
 	wi := &WorkItem{
-		Title:       fieldString(f, "System.Title"),
-		State:       fieldString(f, "System.State"),
-		Type:        fieldString(f, "System.WorkItemType"),
-		Tags:        fieldString(f, "System.Tags"),
-		Description: convertDescription(fieldString(f, "System.Description")),
-		AssignedTo:  extractAssignedTo(f),
+		Title:              fieldString(f, "System.Title"),
+		State:              fieldString(f, "System.State"),
+		Type:               fieldString(f, "System.WorkItemType"),
+		Tags:               fieldString(f, "System.Tags"),
+		Description:        convertToMarkdown(fieldString(f, "System.Description")),
+		AcceptanceCriteria: convertToMarkdown(fieldString(f, "Microsoft.VSTS.Common.AcceptanceCriteria")),
+		ReproSteps:         convertToMarkdown(fieldString(f, "Microsoft.VSTS.TCM.ReproSteps")),
+		AreaPath:           fieldString(f, "System.AreaPath"),
+		IterationPath:      fieldString(f, "System.IterationPath"),
+		Priority:           fieldInt(f, "Microsoft.VSTS.Common.Priority"),
+		ParentID:           extractParentID(f),
+		AssignedTo:         extractAssignedTo(f),
 	}
 	if item.Id != nil {
 		wi.ID = *item.Id
@@ -264,6 +291,30 @@ func fieldString(f *map[string]any, key string) string {
 	return ""
 }
 
+// fieldInt extracts an int value from the ADO fields map.
+// ADO returns numeric fields as float64 in the interface{} map.
+func fieldInt(f *map[string]any, key string) int {
+	v, ok := (*f)[key]
+	if !ok || v == nil {
+		return 0
+	}
+
+	switch n := v.(type) {
+	case float64:
+		return int(n)
+	case int:
+		return n
+	default:
+		return 0
+	}
+}
+
+// extractParentID pulls the numeric ID from the System.Parent relation field.
+// ADO returns this as a float64 (the parent work item ID).
+func extractParentID(f *map[string]any) int {
+	return fieldInt(f, "System.Parent")
+}
+
 // extractAssignedTo pulls the display name from the IdentityRef object
 // that ADO returns for the System.AssignedTo field.
 func extractAssignedTo(f *map[string]any) string {
@@ -282,9 +333,9 @@ func extractAssignedTo(f *map[string]any) string {
 	return dn
 }
 
-// convertDescription converts an HTML description to Markdown.
+// convertToMarkdown converts an HTML description to Markdown.
 // Falls back to the raw HTML string if conversion fails.
-func convertDescription(raw string) string {
+func convertToMarkdown(raw string) string {
 	if raw == "" {
 		return ""
 	}
@@ -297,4 +348,4 @@ func convertDescription(raw string) string {
 	return converted
 }
 
-func strPtr(s string) *string { return &s }
+func ptr[T any](s T) *T { return &s }
