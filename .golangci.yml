@@ -13,12 +13,14 @@ linters:
     - nlreturn      # stylistic preference we don't share
     - noinlineerr   # too pedantic for this codebase
     - paralleltest  # no benefit running these tests in parallel
+    - staticcheck   # SA5011 false positives on nil checks before dereference in test helper functions
     - tagliatelle   # we need snake_case JSON tags to match ADO API conventions
+    - testpackage   # some tests need same-package access to test unexported functions
     - varnamelen    # short names are idiomatic Go
     - wrapcheck     # errors are already wrapped in the client layer; double-wrapping is noise
     - wsl           # deprecated; replaced by wsl_v5
 
-  settings:
+settings:
     lll:
       line-length: 120
     wsl_v5:
