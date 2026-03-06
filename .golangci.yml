@@ -18,11 +18,10 @@ linters:
     - varnamelen # short names are idiomatic Go
     - wrapcheck # errors are already wrapped in the client layer; double-wrapping is noise
     - wsl # deprecated; replaced by wsl_v5
-
-linters-settings:
-  lll:
-    line-length: 120
-  wsl_v5:
-    allow-first-in-block: true
-    allow-whole-block: false
-    branch-max-lines: 2
+  settings:
+    lll:
+      line-length: 120
+    wsl_v5:
+      allow-first-in-block: true
+      allow-whole-block: false
+      branch-max-lines: 2
