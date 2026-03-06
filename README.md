@@ -99,7 +99,55 @@ You can configure the server using either:
 1. **Pre-built binary** (recommended): Download from releases and use the binary path
 2. **Go run**: Run directly from source (requires Go installed)
 
+#### Claude Code (CLI)
+
+Claude Code is Anthropic's CLI tool for developers with agentic workflows and deep codebase awareness.
+
+Add to your Claude Code configuration file:
+
+**All platforms**: `~/.claude/settings.json` (user-level) or `.claude/settings.json` (project-level)
+
+**Using pre-built binary:**
+```json
+{
+  "mcpServers": {
+    "azure-devops": {
+      "command": "/usr/local/bin/azure-devops-mcp",
+      "env": {
+        "AZURE_DEVOPS_ORG_URL": "https://dev.azure.com/your-org",
+        "AZURE_DEVOPS_PAT": "your-personal-access-token",
+        "AZURE_DEVOPS_PROJECT": "your-project-name"
+      }
+    }
+  }
+}
+```
+
+**Using go run:**
+```json
+{
+  "mcpServers": {
+    "azure-devops": {
+      "command": "go",
+      "args": ["run", "github.com/markistaylor/azure-devops-mcp/cmd/azure-devops-mcp@latest"],
+      "env": {
+        "AZURE_DEVOPS_ORG_URL": "https://dev.azure.com/your-org",
+        "AZURE_DEVOPS_PAT": "your-personal-access-token",
+        "AZURE_DEVOPS_PROJECT": "your-project-name"
+      }
+    }
+  }
+}
+```
+
+Alternatively, use the CLI command:
+```bash
+claude mcp add azure-devops /usr/local/bin/azure-devops-mcp
+```
+
 #### Claude Desktop
+
+Claude Desktop is Anthropic's desktop app with a graphical interface.
 
 Add to your Claude Desktop configuration file:
 
@@ -122,7 +170,7 @@ Add to your Claude Desktop configuration file:
 }
 ```
 
-**Using go run (requires Go installed):**
+**Using go run:**
 ```json
 {
   "mcpServers": {
