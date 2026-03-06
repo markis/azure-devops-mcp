@@ -264,50 +264,6 @@ func (c *RealADOClient) AddComment(ctx context.Context, project string, id int, 
 	return err
 }
 
-// fetchByRefs fetches full work item details for a list of WorkItemReference.
-func (c *RealADOClient) fetchByRefs(
-	ctx context.Context, project string, refs *[]workitemtracking.WorkItemReference,
-) ([]*WorkItem, error) {
-	if refs == nil || len(*refs) == 0 {
-		return nil, nil
-	}
-
-	ids := make([]int, len(*refs))
-	for i, ref := range *refs {
-		ids[i] = *ref.Id
-	}
-
-	fields := []string{
-		"System.Id", "System.Title", "System.State", "System.WorkItemType",
-		"System.AssignedTo", "System.Tags", "System.Description",
-		"System.AreaPath", "System.IterationPath", "System.Parent",
-		"Microsoft.VSTS.Common.AcceptanceCriteria",
-		"Microsoft.VSTS.Common.Priority",
-		"Custom.Teeshirtsizing",
-		"Microsoft.VSTS.Scheduling.StoryPoints",
-		"Microsoft.VSTS.Scheduling.OriginalEstimate",
-		"Microsoft.VSTS.TCM.ReproSteps",
-	}
-
-	items, err := c.wit.GetWorkItemsBatch(ctx, workitemtracking.GetWorkItemsBatchArgs{
-		WorkItemGetRequest: &workitemtracking.WorkItemBatchGetRequest{
-			Ids:    &ids,
-			Fields: &fields,
-		},
-		Project: &project,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("batch fetch work items: %w", err)
-	}
-
-	result := make([]*WorkItem, len(*items))
-	for i, item := range *items {
-		result[i] = toWorkItem(&item)
-	}
-
-	return result, nil
-}
-
 // fetchSummariesByRefs retrieves work item summaries (without large text fields) by batch.
 func (c *RealADOClient) fetchSummariesByRefs(
 	ctx context.Context, project string, refs *[]workitemtracking.WorkItemReference,
