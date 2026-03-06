@@ -12,7 +12,9 @@ import (
 func TestRegisterAllTools(t *testing.T) {
 	mock := &client.MockADOClient{
 		GetWorkItemFn: func(_ context.Context, _ string, id int) (*client.WorkItem, error) {
-			return &client.WorkItem{ID: id, Title: "Test"}, nil
+			return &client.WorkItem{
+				WorkItemSummary: client.WorkItemSummary{ID: id, Title: "Test"},
+			}, nil
 		},
 		ListWorkItemsFn: func(_ context.Context, _ string, _ string) ([]*client.WorkItemSummary, error) {
 			return []*client.WorkItemSummary{{ID: 1}}, nil
@@ -23,12 +25,16 @@ func TestRegisterAllTools(t *testing.T) {
 		CreateWorkItemFn: func(
 			_ context.Context, _, _, _ string, _ client.CreateOptions,
 		) (*client.WorkItem, error) {
-			return &client.WorkItem{ID: 1}, nil
+			return &client.WorkItem{
+				WorkItemSummary: client.WorkItemSummary{ID: 1},
+			}, nil
 		},
 		UpdateWorkItemFn: func(
 			_ context.Context, _ string, _ int, _ client.UpdateOptions,
 		) (*client.WorkItem, error) {
-			return &client.WorkItem{ID: 1}, nil
+			return &client.WorkItem{
+				WorkItemSummary: client.WorkItemSummary{ID: 1},
+			}, nil
 		},
 		AddCommentFn: func(_ context.Context, _ string, _ int, _ string) error {
 			return nil

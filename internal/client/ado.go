@@ -39,28 +39,6 @@ var (
 	fieldPathSize               = "/fields/Custom.Teeshirtsizing"
 )
 
-// WorkItem is a slim representation of an Azure DevOps work item.
-// Only fields Claude needs are included — not the full API response.
-type WorkItem struct {
-	ID                 int     `json:"id"`
-	Title              string  `json:"title"`
-	State              string  `json:"state"`
-	Type               string  `json:"type"`
-	AssignedTo         string  `json:"assigned_to"`
-	Description        string  `json:"description"`
-	AcceptanceCriteria string  `json:"acceptance_criteria,omitempty"`
-	ReproSteps         string  `json:"repro_steps,omitempty"`
-	Tags               string  `json:"tags"`
-	Priority           int     `json:"priority,omitempty"`
-	StoryPoints        float64 `json:"story_points,omitempty"`
-	OriginalEstimate   float64 `json:"original_estimate,omitempty"`
-	Size               string  `json:"size,omitempty"`
-	AreaPath           string  `json:"area_path,omitempty"`
-	IterationPath      string  `json:"iteration_path,omitempty"`
-	ParentID           int     `json:"parent_id,omitempty"`
-	URL                string  `json:"url"`
-}
-
 // WorkItemSummary is a lightweight representation for list operations.
 // Excludes large text fields (description, acceptance criteria, repro steps).
 type WorkItemSummary struct {
@@ -75,6 +53,20 @@ type WorkItemSummary struct {
 	AreaPath      string  `json:"area_path,omitempty"`
 	IterationPath string  `json:"iteration_path,omitempty"`
 	ParentID      int     `json:"parent_id,omitempty"`
+}
+
+// WorkItem is a slim representation of an Azure DevOps work item.
+// Only fields Claude needs are included — not the full API response.
+// Embeds WorkItemSummary and adds large text fields.
+type WorkItem struct {
+	WorkItemSummary
+
+	Description        string  `json:"description"`
+	AcceptanceCriteria string  `json:"acceptance_criteria,omitempty"`
+	ReproSteps         string  `json:"repro_steps,omitempty"`
+	OriginalEstimate   float64 `json:"original_estimate,omitempty"`
+	Size               string  `json:"size,omitempty"`
+	URL                string  `json:"url"`
 }
 
 // CreateOptions holds optional fields for creating a work item.
@@ -314,21 +306,23 @@ func toWorkItem(item *workitemtracking.WorkItem) *WorkItem {
 	f := item.Fields
 
 	wi := &WorkItem{
-		Title:              fieldString(f, "System.Title"),
-		State:              fieldString(f, "System.State"),
-		Type:               fieldString(f, "System.WorkItemType"),
-		Tags:               fieldString(f, "System.Tags"),
+		WorkItemSummary: WorkItemSummary{
+			Title:         fieldString(f, "System.Title"),
+			State:         fieldString(f, "System.State"),
+			Type:          fieldString(f, "System.WorkItemType"),
+			Tags:          fieldString(f, "System.Tags"),
+			AreaPath:      fieldString(f, "System.AreaPath"),
+			IterationPath: fieldString(f, "System.IterationPath"),
+			Priority:      fieldInt(f, "Microsoft.VSTS.Common.Priority"),
+			StoryPoints:   fieldFloat(f, "Microsoft.VSTS.Scheduling.StoryPoints"),
+			ParentID:      extractParentID(f),
+			AssignedTo:    extractAssignedTo(f),
+		},
 		Description:        convertToMarkdown(fieldString(f, "System.Description")),
 		AcceptanceCriteria: convertToMarkdown(fieldString(f, "Microsoft.VSTS.Common.AcceptanceCriteria")),
 		ReproSteps:         convertToMarkdown(fieldString(f, "Microsoft.VSTS.TCM.ReproSteps")),
-		AreaPath:           fieldString(f, "System.AreaPath"),
-		IterationPath:      fieldString(f, "System.IterationPath"),
-		Priority:           fieldInt(f, "Microsoft.VSTS.Common.Priority"),
-		StoryPoints:        fieldFloat(f, "Microsoft.VSTS.Scheduling.StoryPoints"),
 		OriginalEstimate:   fieldFloat(f, "Microsoft.VSTS.Scheduling.OriginalEstimate"),
 		Size:               fieldString(f, "Custom.Teeshirtsizing"),
-		ParentID:           extractParentID(f),
-		AssignedTo:         extractAssignedTo(f),
 	}
 	if item.Id != nil {
 		wi.ID = *item.Id

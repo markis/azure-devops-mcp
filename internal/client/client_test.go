@@ -8,20 +8,22 @@ import (
 
 func TestWorkItem_JSONMarshaling(t *testing.T) {
 	wi := &client.WorkItem{
-		ID:                 123,
-		Title:              "Test Item",
-		State:              "Active",
-		Type:               "Bug",
-		AssignedTo:         "user@example.com",
+		WorkItemSummary: client.WorkItemSummary{
+			ID:            123,
+			Title:         "Test Item",
+			State:         "Active",
+			Type:          "Bug",
+			AssignedTo:    "user@example.com",
+			Tags:          "tag1;tag2",
+			AreaPath:      "Area\\Path",
+			IterationPath: "Iteration\\Path",
+			Priority:      1,
+			ParentID:      456,
+			StoryPoints:   5.0,
+		},
 		Description:        "Test description",
 		AcceptanceCriteria: "AC",
-		Tags:               "tag1;tag2",
-		AreaPath:           "Area\\Path",
-		IterationPath:      "Iteration\\Path",
-		Priority:           1,
 		ReproSteps:         "Steps",
-		ParentID:           456,
-		StoryPoints:        5.0,
 		OriginalEstimate:   8.0,
 		Size:               "M",
 	}

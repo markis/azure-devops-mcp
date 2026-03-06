@@ -17,7 +17,9 @@ func TestMockADOClient_GetWorkItem(t *testing.T) {
 				t.Errorf("expected project 'TestProject', got %q", project)
 			}
 
-			return &client.WorkItem{ID: 42, Title: "Test"}, nil
+			return &client.WorkItem{
+				WorkItemSummary: client.WorkItemSummary{ID: 42, Title: "Test"},
+			}, nil
 		},
 	}
 
@@ -99,7 +101,9 @@ func TestMockADOClient_CreateWorkItem(t *testing.T) {
 				t.Errorf("expected title 'New Item', got %q", title)
 			}
 
-			return &client.WorkItem{ID: 100, Title: title}, nil
+			return &client.WorkItem{
+				WorkItemSummary: client.WorkItemSummary{ID: 100, Title: title},
+			}, nil
 		},
 	}
 
@@ -129,7 +133,9 @@ func TestMockADOClient_UpdateWorkItem(t *testing.T) {
 				t.Errorf("expected id 42, got %d", id)
 			}
 
-			return &client.WorkItem{ID: 42, Title: "Updated"}, nil
+			return &client.WorkItem{
+				WorkItemSummary: client.WorkItemSummary{ID: 42, Title: "Updated"},
+			}, nil
 		},
 	}
 

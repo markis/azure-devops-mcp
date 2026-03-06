@@ -17,10 +17,12 @@ func TestGetWorkItem_ReturnsWorkItem(t *testing.T) {
 			}
 
 			return &client.WorkItem{
-				ID:    42,
-				Title: "Fix the thing",
-				State: "Active",
-				Type:  "Bug",
+				WorkItemSummary: client.WorkItemSummary{
+					ID:    42,
+					Title: "Fix the thing",
+					State: "Active",
+					Type:  "Bug",
+				},
 			}, nil
 		},
 	}
@@ -112,7 +114,14 @@ func TestCreateWorkItem_CreatesAndReturnsItem(t *testing.T) {
 				t.Fatalf("expected type 'Bug', got %q", workItemType)
 			}
 
-			return &client.WorkItem{ID: 99, Title: title, Type: workItemType, State: "New"}, nil
+			return &client.WorkItem{
+				WorkItemSummary: client.WorkItemSummary{
+					ID:    99,
+					Title: title,
+					Type:  workItemType,
+					State: "New",
+				},
+			}, nil
 		},
 	}
 
@@ -140,7 +149,13 @@ func TestUpdateWorkItem_UpdatesAndReturnsItem(t *testing.T) {
 				t.Fatalf("expected id 42, got %d", id)
 			}
 
-			return &client.WorkItem{ID: 42, Title: opts.Title, State: opts.State}, nil
+			return &client.WorkItem{
+				WorkItemSummary: client.WorkItemSummary{
+					ID:    42,
+					Title: opts.Title,
+					State: opts.State,
+				},
+			}, nil
 		},
 	}
 
@@ -166,9 +181,11 @@ func TestGetWorkItem_ReturnsEstimationFields(t *testing.T) {
 	mock := &client.MockADOClient{
 		GetWorkItemFn: func(_ context.Context, _ string, _ int) (*client.WorkItem, error) {
 			return &client.WorkItem{
-				ID:               42,
-				Title:            "My story",
-				StoryPoints:      5,
+				WorkItemSummary: client.WorkItemSummary{
+					ID:          42,
+					Title:       "My story",
+					StoryPoints: 5,
+				},
 				OriginalEstimate: 8.5,
 				Size:             "M",
 			}, nil
@@ -204,8 +221,10 @@ func TestUpdateWorkItem_UpdatesEstimationFields(t *testing.T) {
 	mock := &client.MockADOClient{
 		UpdateWorkItemFn: func(_ context.Context, _ string, id int, opts client.UpdateOptions) (*client.WorkItem, error) {
 			return &client.WorkItem{
-				ID:               id,
-				StoryPoints:      opts.StoryPoints,
+				WorkItemSummary: client.WorkItemSummary{
+					ID:          id,
+					StoryPoints: opts.StoryPoints,
+				},
 				OriginalEstimate: opts.OriginalEstimate,
 				Size:             opts.Size,
 			}, nil
@@ -242,8 +261,10 @@ func TestGetWorkItem_ReturnsAcceptanceCriteria(t *testing.T) {
 	mock := &client.MockADOClient{
 		GetWorkItemFn: func(_ context.Context, _ string, _ int) (*client.WorkItem, error) {
 			return &client.WorkItem{
-				ID:                 42,
-				Title:              "My story",
+				WorkItemSummary: client.WorkItemSummary{
+					ID:    42,
+					Title: "My story",
+				},
 				AcceptanceCriteria: "## AC\n- Does the thing",
 			}, nil
 		},
@@ -270,13 +291,15 @@ func TestGetWorkItem_ReturnsExtendedFields(t *testing.T) {
 	mock := &client.MockADOClient{
 		GetWorkItemFn: func(_ context.Context, _ string, _ int) (*client.WorkItem, error) {
 			return &client.WorkItem{
-				ID:            42,
-				Title:         "My story",
-				Priority:      2,
-				AreaPath:      "Access Analyzer\\Team A",
-				IterationPath: "Access Analyzer\\Sprint 10",
-				ReproSteps:    "1. Do thing\n2. See bug",
-				ParentID:      100,
+				WorkItemSummary: client.WorkItemSummary{
+					ID:            42,
+					Title:         "My story",
+					Priority:      2,
+					AreaPath:      "Access Analyzer\\Team A",
+					IterationPath: "Access Analyzer\\Sprint 10",
+					ParentID:      100,
+				},
+				ReproSteps: "1. Do thing\n2. See bug",
 			}, nil
 		},
 	}
@@ -447,7 +470,9 @@ func TestProject_UsesOverride(t *testing.T) {
 				t.Errorf("expected project 'OverrideProject', got %q", project)
 			}
 
-			return &client.WorkItem{ID: 1}, nil
+			return &client.WorkItem{
+				WorkItemSummary: client.WorkItemSummary{ID: 1},
+			}, nil
 		},
 	}
 
@@ -466,7 +491,9 @@ func TestProject_UsesDefault(t *testing.T) {
 				t.Errorf("expected project 'DefaultProject', got %q", project)
 			}
 
-			return &client.WorkItem{ID: 1}, nil
+			return &client.WorkItem{
+				WorkItemSummary: client.WorkItemSummary{ID: 1},
+			}, nil
 		},
 	}
 
