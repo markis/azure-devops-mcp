@@ -4,10 +4,15 @@ import (
 	"context"
 	"fmt"
 
+	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7"
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/webapi"
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/workitemtracking"
 )
+
+// htmlToMD converts HTML strings returned by the ADO API to Markdown.
+// Created once at package init; safe for concurrent use.
+var htmlToMD = md.NewConverter("", true, nil)
 
 // WorkItem is a slim representation of an Azure DevOps work item.
 // Only fields Claude needs are included — not the full API response.
@@ -201,11 +206,17 @@ func toWorkItem(item *workitemtracking.WorkItem) *WorkItem {
 		return ""
 	}
 	wi := &WorkItem{
-		Title:       get("System.Title"),
-		State:       get("System.State"),
-		Type:        get("System.WorkItemType"),
-		Description: get("System.Description"),
-		Tags:        get("System.Tags"),
+		Title: get("System.Title"),
+		State: get("System.State"),
+		Type:  get("System.WorkItemType"),
+		Tags:  get("System.Tags"),
+	}
+	if raw := get("System.Description"); raw != "" {
+		if converted, err := htmlToMD.ConvertString(raw); err == nil {
+			wi.Description = converted
+		} else {
+			wi.Description = raw // fall back to raw HTML on conversion failure
+		}
 	}
 	if item.Id != nil {
 		wi.ID = *item.Id
