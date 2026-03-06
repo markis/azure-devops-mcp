@@ -1,0 +1,162 @@
+package controller
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/markistaylor/azure-devops-mcp/internal/client"
+	"github.com/markistaylor/azure-devops-mcp/internal/tools"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+)
+
+// Config holds the configuration required to run the MCP server.
+type Config struct {
+	OrgURL  string
+	PAT     string
+	Project string
+}
+
+// Run creates the ADO client, registers all tools, and starts the MCP server
+// over stdio. It blocks until the client disconnects or ctx is cancelled.
+func Run(ctx context.Context, cfg Config) error {
+	ado, err := client.NewRealADOClient(ctx, cfg.OrgURL, cfg.PAT)
+	if err != nil {
+		return fmt.Errorf("creating ADO client: %w", err)
+	}
+
+	h := tools.NewHandlers(ado, cfg.Project)
+
+	srv := mcp.NewServer(&mcp.Implementation{
+		Name:    "azure-devops-mcp",
+		Version: "0.1.0",
+	}, nil)
+
+	// get_work_item
+	type getWorkItemInput struct {
+		ID      int    `json:"id"`
+		Project string `json:"project,omitempty"`
+	}
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "get_work_item",
+		Description: "Fetch a single Azure DevOps work item by numeric ID.",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, in getWorkItemInput) (*mcp.CallToolResult, any, error) {
+		text, err := h.GetWorkItem(ctx, in.ID, in.Project)
+		if err != nil {
+			return nil, nil, err
+		}
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{&mcp.TextContent{Text: text}},
+		}, nil, nil
+	})
+
+	// list_work_items
+	type listWorkItemsInput struct {
+		Query   string `json:"query"`
+		Project string `json:"project,omitempty"`
+	}
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "list_work_items",
+		Description: "Run a WIQL query and return matching Azure DevOps work items.",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, in listWorkItemsInput) (*mcp.CallToolResult, any, error) {
+		text, err := h.ListWorkItems(ctx, in.Query, in.Project)
+		if err != nil {
+			return nil, nil, err
+		}
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{&mcp.TextContent{Text: text}},
+		}, nil, nil
+	})
+
+	// list_my_work_items
+	type listMyWorkItemsInput struct {
+		Project string `json:"project,omitempty"`
+	}
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "list_my_work_items",
+		Description: "Return active work items assigned to the authenticated user.",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, in listMyWorkItemsInput) (*mcp.CallToolResult, any, error) {
+		text, err := h.ListMyWorkItems(ctx, in.Project)
+		if err != nil {
+			return nil, nil, err
+		}
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{&mcp.TextContent{Text: text}},
+		}, nil, nil
+	})
+
+	// create_work_item
+	type createWorkItemInput struct {
+		Type        string `json:"type"`
+		Title       string `json:"title"`
+		Description string `json:"description,omitempty"`
+		AssignedTo  string `json:"assigned_to,omitempty"`
+		Tags        string `json:"tags,omitempty"`
+		Project     string `json:"project,omitempty"`
+	}
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "create_work_item",
+		Description: "Create a new Azure DevOps work item.",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, in createWorkItemInput) (*mcp.CallToolResult, any, error) {
+		opts := client.CreateOptions{
+			Description: in.Description,
+			AssignedTo:  in.AssignedTo,
+			Tags:        in.Tags,
+		}
+		text, err := h.CreateWorkItem(ctx, in.Type, in.Title, opts, in.Project)
+		if err != nil {
+			return nil, nil, err
+		}
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{&mcp.TextContent{Text: text}},
+		}, nil, nil
+	})
+
+	// update_work_item
+	type updateWorkItemInput struct {
+		ID          int    `json:"id"`
+		Title       string `json:"title,omitempty"`
+		State       string `json:"state,omitempty"`
+		AssignedTo  string `json:"assigned_to,omitempty"`
+		Description string `json:"description,omitempty"`
+		Project     string `json:"project,omitempty"`
+	}
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "update_work_item",
+		Description: "Update fields on an existing Azure DevOps work item.",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, in updateWorkItemInput) (*mcp.CallToolResult, any, error) {
+		opts := client.UpdateOptions{
+			Title:       in.Title,
+			State:       in.State,
+			AssignedTo:  in.AssignedTo,
+			Description: in.Description,
+		}
+		text, err := h.UpdateWorkItem(ctx, in.ID, opts, in.Project)
+		if err != nil {
+			return nil, nil, err
+		}
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{&mcp.TextContent{Text: text}},
+		}, nil, nil
+	})
+
+	// add_comment
+	type addCommentInput struct {
+		ID      int    `json:"id"`
+		Text    string `json:"text"`
+		Project string `json:"project,omitempty"`
+	}
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "add_comment",
+		Description: "Add a comment to an Azure DevOps work item.",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, in addCommentInput) (*mcp.CallToolResult, any, error) {
+		text, err := h.AddComment(ctx, in.ID, in.Text, in.Project)
+		if err != nil {
+			return nil, nil, err
+		}
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{&mcp.TextContent{Text: text}},
+		}, nil, nil
+	})
+
+	return srv.Run(ctx, &mcp.StdioTransport{})
+}
