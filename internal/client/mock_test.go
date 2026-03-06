@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/markistaylor/azure-devops-mcp/internal/client"
+	"github.com/markis/azure-devops-mcp/internal/client"
 )
 
 func TestMockADOClient_GetWorkItem(t *testing.T) {

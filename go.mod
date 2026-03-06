@@ -1,4 +1,4 @@
-module github.com/markistaylor/azure-devops-mcp
+module github.com/markis/azure-devops-mcp
 
 go 1.26
 

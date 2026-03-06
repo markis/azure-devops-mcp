@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/markistaylor/azure-devops-mcp/internal/controller"
+	"github.com/markis/azure-devops-mcp/internal/controller"
 )
 
 func main() {

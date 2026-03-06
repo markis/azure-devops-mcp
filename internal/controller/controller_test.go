@@ -3,9 +3,9 @@ package controller_test
 import (
 	"testing"
 
-	"github.com/markistaylor/azure-devops-mcp/internal/client"
-	"github.com/markistaylor/azure-devops-mcp/internal/controller"
-	"github.com/markistaylor/azure-devops-mcp/internal/tools"
+	"github.com/markis/azure-devops-mcp/internal/client"
+	"github.com/markis/azure-devops-mcp/internal/controller"
+	"github.com/markis/azure-devops-mcp/internal/tools"
 )
 
 func TestCreateServer(t *testing.T) {

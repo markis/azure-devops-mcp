@@ -129,7 +129,7 @@ Add to your Claude Code configuration file:
   "mcpServers": {
     "azure-devops": {
       "command": "go",
-      "args": ["run", "github.com/markistaylor/azure-devops-mcp/cmd/azure-devops-mcp@latest"],
+      "args": ["run", "github.com/markis/azure-devops-mcp/cmd/azure-devops-mcp@latest"],
       "env": {
         "AZURE_DEVOPS_ORG_URL": "https://dev.azure.com/your-org",
         "AZURE_DEVOPS_PAT": "your-personal-access-token",
@@ -176,7 +176,7 @@ Add to your Claude Desktop configuration file:
   "mcpServers": {
     "azure-devops": {
       "command": "go",
-      "args": ["run", "github.com/markistaylor/azure-devops-mcp/cmd/azure-devops-mcp@latest"],
+      "args": ["run", "github.com/markis/azure-devops-mcp/cmd/azure-devops-mcp@latest"],
       "env": {
         "AZURE_DEVOPS_ORG_URL": "https://dev.azure.com/your-org",
         "AZURE_DEVOPS_PAT": "your-personal-access-token",
@@ -216,7 +216,7 @@ Add to your Cline MCP settings file:
   "mcpServers": {
     "azure-devops": {
       "command": "go",
-      "args": ["run", "github.com/markistaylor/azure-devops-mcp/cmd/azure-devops-mcp@latest"],
+      "args": ["run", "github.com/markis/azure-devops-mcp/cmd/azure-devops-mcp@latest"],
       "env": {
         "AZURE_DEVOPS_ORG_URL": "https://dev.azure.com/your-org",
         "AZURE_DEVOPS_PAT": "your-personal-access-token",
@@ -255,7 +255,7 @@ Add to your OpenCode MCP configuration:
   "mcpServers": {
     "azure-devops": {
       "command": "go",
-      "args": ["run", "github.com/markistaylor/azure-devops-mcp/cmd/azure-devops-mcp@latest"],
+      "args": ["run", "github.com/markis/azure-devops-mcp/cmd/azure-devops-mcp@latest"],
       "env": {
         "AZURE_DEVOPS_ORG_URL": "https://dev.azure.com/your-org",
         "AZURE_DEVOPS_PAT": "your-personal-access-token",

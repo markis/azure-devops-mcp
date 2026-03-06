@@ -3,7 +3,7 @@ package client_test
 import (
 	"testing"
 
-	"github.com/markistaylor/azure-devops-mcp/internal/client"
+	"github.com/markis/azure-devops-mcp/internal/client"
 )
 
 func TestWorkItem_JSONMarshaling(t *testing.T) {

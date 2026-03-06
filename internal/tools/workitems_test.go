@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/markistaylor/azure-devops-mcp/internal/client"
-	"github.com/markistaylor/azure-devops-mcp/internal/tools"
+	"github.com/markis/azure-devops-mcp/internal/client"
+	"github.com/markis/azure-devops-mcp/internal/tools"
 )
 
 func TestGetWorkItem_ReturnsWorkItem(t *testing.T) {

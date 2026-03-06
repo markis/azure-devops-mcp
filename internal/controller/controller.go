@@ -6,8 +6,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/markistaylor/azure-devops-mcp/internal/client"
-	"github.com/markistaylor/azure-devops-mcp/internal/tools"
+	"github.com/markis/azure-devops-mcp/internal/client"
+	"github.com/markis/azure-devops-mcp/internal/tools"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

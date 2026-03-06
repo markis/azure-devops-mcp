@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/markistaylor/azure-devops-mcp/internal/client"
+	"github.com/markis/azure-devops-mcp/internal/client"
 )
 
 // Handlers holds the ADO client and default project for all tool handlers.
