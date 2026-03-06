@@ -139,7 +139,7 @@ func (c *RealADOClient) UpdateWorkItem(ctx context.Context, project string, id i
 		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: strPtr("/fields/System.Description"), Value: opts.Description})
 	}
 	if len(ops) == 0 {
-		return c.GetWorkItem(ctx, project, id)
+		return nil, fmt.Errorf("no fields to update: provide at least one of title, state, assigned_to, or description")
 	}
 	item, err := c.wit.UpdateWorkItem(ctx, workitemtracking.UpdateWorkItemArgs{
 		Document: &ops,
@@ -170,7 +170,7 @@ func (c *RealADOClient) fetchByRefs(ctx context.Context, project string, refs *[
 	for i, ref := range *refs {
 		ids[i] = *ref.Id
 	}
-	fields := []string{"System.Id", "System.Title", "System.State", "System.WorkItemType", "System.AssignedTo", "System.Tags"}
+	fields := []string{"System.Id", "System.Title", "System.State", "System.WorkItemType", "System.AssignedTo", "System.Tags", "System.Description"}
 	items, err := c.wit.GetWorkItemsBatch(ctx, workitemtracking.GetWorkItemsBatchArgs{
 		WorkItemGetRequest: &workitemtracking.WorkItemBatchGetRequest{
 			Ids:    &ids,
