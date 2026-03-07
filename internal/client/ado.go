@@ -42,17 +42,17 @@ var (
 // WorkItemSummary is a lightweight representation for list operations.
 // Excludes large text fields (description, acceptance criteria, repro steps).
 type WorkItemSummary struct {
-	ID            int     `json:"id"`
-	Title         string  `json:"title"`
-	State         string  `json:"state"`
-	Type          string  `json:"type"`
-	AssignedTo    string  `json:"assigned_to"`
-	Tags          string  `json:"tags"`
-	Priority      int     `json:"priority,omitempty"`
-	StoryPoints   float64 `json:"story_points,omitempty"`
-	AreaPath      string  `json:"area_path,omitempty"`
-	IterationPath string  `json:"iteration_path,omitempty"`
-	ParentID      int     `json:"parent_id,omitempty"`
+	ID            int     `json:"id"                       jsonschema:"Unique work item ID"`
+	Title         string  `json:"title"                    jsonschema:"Work item title"`
+	State         string  `json:"state"                    jsonschema:"Work item state"`
+	Type          string  `json:"type"                     jsonschema:"Work item type"`
+	AssignedTo    string  `json:"assigned_to"              jsonschema:"Email or display name of assignee"`
+	Tags          string  `json:"tags"                     jsonschema:"Semicolon-separated tags"`
+	Priority      int     `json:"priority,omitempty"       jsonschema:"Priority level (1-4)"`
+	StoryPoints   float64 `json:"story_points,omitempty"   jsonschema:"Story points estimate"`
+	AreaPath      string  `json:"area_path,omitempty"      jsonschema:"Area path in the project"`
+	IterationPath string  `json:"iteration_path,omitempty" jsonschema:"Iteration/sprint path"`
+	ParentID      int     `json:"parent_id,omitempty"      jsonschema:"ID of parent work item"`
 }
 
 // WorkItem is a slim representation of an Azure DevOps work item.
@@ -61,12 +61,12 @@ type WorkItemSummary struct {
 type WorkItem struct {
 	WorkItemSummary
 
-	Description        string  `json:"description"`
-	AcceptanceCriteria string  `json:"acceptance_criteria,omitempty"`
-	ReproSteps         string  `json:"repro_steps,omitempty"`
-	OriginalEstimate   float64 `json:"original_estimate,omitempty"`
-	Size               string  `json:"size,omitempty"`
-	URL                string  `json:"url"`
+	Description        string  `json:"description"                   jsonschema:"Work item description"`
+	AcceptanceCriteria string  `json:"acceptance_criteria,omitempty" jsonschema:"Acceptance criteria"`
+	ReproSteps         string  `json:"repro_steps,omitempty"         jsonschema:"Reproduction steps"`
+	OriginalEstimate   float64 `json:"original_estimate,omitempty"   jsonschema:"Time estimate in hours"`
+	Size               string  `json:"size,omitempty"                jsonschema:"T-shirt size estimate"`
+	URL                string  `json:"url"                           jsonschema:"Work item URL"`
 }
 
 // CreateOptions holds optional fields for creating a work item.

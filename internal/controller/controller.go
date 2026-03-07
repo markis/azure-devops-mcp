@@ -100,7 +100,7 @@ func registerListWorkItems(srv *mcp.Server, h *tools.Handlers) {
 	}
 
 	type listWorkItemsOutput struct {
-		WorkItems []*client.WorkItemSummary `json:"work_items"`
+		WorkItems []*client.WorkItemSummary `json:"work_items" jsonschema:"Work items matching query"`
 	}
 
 	mcp.AddTool(srv, &mcp.Tool{
@@ -142,7 +142,7 @@ func registerListMyWorkItems(srv *mcp.Server, h *tools.Handlers) {
 	}
 
 	type listMyWorkItemsOutput struct {
-		WorkItems []*client.WorkItemSummary `json:"work_items"`
+		WorkItems []*client.WorkItemSummary `json:"work_items" jsonschema:"Work items assigned to user"`
 	}
 
 	mcp.AddTool(srv, &mcp.Tool{
