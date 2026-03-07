@@ -2,7 +2,6 @@ package tools_test
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 
 	"github.com/markis/azure-devops-mcp/internal/client"
@@ -29,14 +28,9 @@ func TestGetWorkItem_ReturnsWorkItem(t *testing.T) {
 
 	h := tools.NewHandlers(mock, "MyProject")
 
-	result, err := h.GetWorkItem(context.Background(), 42, "")
+	wi, text, err := h.GetWorkItem(context.Background(), 42, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
-	}
-
-	var wi client.WorkItem
-	if err := json.Unmarshal([]byte(result), &wi); err != nil {
-		t.Fatalf("result not valid JSON: %v", err)
 	}
 
 	if wi.ID != 42 {
@@ -45,6 +39,10 @@ func TestGetWorkItem_ReturnsWorkItem(t *testing.T) {
 
 	if wi.Title != "Fix the thing" {
 		t.Errorf("expected title 'Fix the thing', got %q", wi.Title)
+	}
+
+	if text == "" {
+		t.Error("expected non-empty markdown text")
 	}
 }
 
@@ -60,18 +58,17 @@ func TestListWorkItems_ReturnsItems(t *testing.T) {
 
 	h := tools.NewHandlers(mock, "MyProject")
 
-	result, err := h.ListWorkItems(context.Background(), "SELECT [Id] FROM WorkItems", "")
+	items, text, err := h.ListWorkItems(context.Background(), "SELECT [Id] FROM WorkItems", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	var items []*client.WorkItem
-	if err := json.Unmarshal([]byte(result), &items); err != nil {
-		t.Fatalf("result not valid JSON: %v", err)
-	}
-
 	if len(items) != 2 {
 		t.Errorf("expected 2 items, got %d", len(items))
+	}
+
+	if text == "" {
+		t.Error("expected non-empty markdown text")
 	}
 }
 
@@ -86,18 +83,17 @@ func TestListMyWorkItems_ReturnsAssignedItems(t *testing.T) {
 
 	h := tools.NewHandlers(mock, "MyProject")
 
-	result, err := h.ListMyWorkItems(context.Background(), "")
+	items, text, err := h.ListMyWorkItems(context.Background(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	var items []*client.WorkItem
-	if err := json.Unmarshal([]byte(result), &items); err != nil {
-		t.Fatalf("result not valid JSON: %v", err)
-	}
-
 	if len(items) != 1 || items[0].ID != 5 {
 		t.Errorf("unexpected items: %+v", items)
+	}
+
+	if text == "" {
+		t.Error("expected non-empty markdown text")
 	}
 }
 
@@ -127,18 +123,17 @@ func TestCreateWorkItem_CreatesAndReturnsItem(t *testing.T) {
 
 	h := tools.NewHandlers(mock, "MyProject")
 
-	result, err := h.CreateWorkItem(context.Background(), "Bug", "New bug", client.CreateOptions{}, "")
+	wi, text, err := h.CreateWorkItem(context.Background(), "Bug", "New bug", client.CreateOptions{}, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	var wi client.WorkItem
-	if err := json.Unmarshal([]byte(result), &wi); err != nil {
-		t.Fatalf("result not valid JSON: %v", err)
-	}
-
 	if wi.ID != 99 {
 		t.Errorf("expected ID 99, got %d", wi.ID)
+	}
+
+	if text == "" {
+		t.Error("expected non-empty markdown text")
 	}
 }
 
@@ -162,18 +157,17 @@ func TestUpdateWorkItem_UpdatesAndReturnsItem(t *testing.T) {
 	h := tools.NewHandlers(mock, "MyProject")
 	opts := client.UpdateOptions{Title: "Updated title", State: "Resolved"}
 
-	result, err := h.UpdateWorkItem(context.Background(), 42, opts, "")
+	wi, text, err := h.UpdateWorkItem(context.Background(), 42, opts, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	var wi client.WorkItem
-	if err := json.Unmarshal([]byte(result), &wi); err != nil {
-		t.Fatalf("result not valid JSON: %v", err)
-	}
-
 	if wi.Title != "Updated title" {
 		t.Errorf("expected 'Updated title', got %q", wi.Title)
+	}
+
+	if text == "" {
+		t.Error("expected non-empty markdown text")
 	}
 }
 
@@ -194,14 +188,9 @@ func TestGetWorkItem_ReturnsEstimationFields(t *testing.T) {
 
 	h := tools.NewHandlers(mock, "MyProject")
 
-	result, err := h.GetWorkItem(context.Background(), 42, "")
+	wi, _, err := h.GetWorkItem(context.Background(), 42, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
-	}
-
-	var wi client.WorkItem
-	if err := json.Unmarshal([]byte(result), &wi); err != nil {
-		t.Fatalf("result not valid JSON: %v", err)
 	}
 
 	if wi.StoryPoints != 5 {
@@ -234,14 +223,9 @@ func TestUpdateWorkItem_UpdatesEstimationFields(t *testing.T) {
 	h := tools.NewHandlers(mock, "MyProject")
 	opts := client.UpdateOptions{StoryPoints: 3, OriginalEstimate: 4.0, Size: "S"}
 
-	result, err := h.UpdateWorkItem(context.Background(), 42, opts, "")
+	wi, _, err := h.UpdateWorkItem(context.Background(), 42, opts, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
-	}
-
-	var wi client.WorkItem
-	if err := json.Unmarshal([]byte(result), &wi); err != nil {
-		t.Fatalf("result not valid JSON: %v", err)
 	}
 
 	if wi.StoryPoints != 3 {
@@ -272,14 +256,9 @@ func TestGetWorkItem_ReturnsAcceptanceCriteria(t *testing.T) {
 
 	h := tools.NewHandlers(mock, "MyProject")
 
-	result, err := h.GetWorkItem(context.Background(), 42, "")
+	wi, _, err := h.GetWorkItem(context.Background(), 42, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
-	}
-
-	var wi client.WorkItem
-	if err := json.Unmarshal([]byte(result), &wi); err != nil {
-		t.Fatalf("result not valid JSON: %v", err)
 	}
 
 	if wi.AcceptanceCriteria != "## AC\n- Does the thing" {
@@ -306,14 +285,9 @@ func TestGetWorkItem_ReturnsExtendedFields(t *testing.T) {
 
 	h := tools.NewHandlers(mock, "MyProject")
 
-	result, err := h.GetWorkItem(context.Background(), 42, "")
+	wi, _, err := h.GetWorkItem(context.Background(), 42, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
-	}
-
-	var wi client.WorkItem
-	if err := json.Unmarshal([]byte(result), &wi); err != nil {
-		t.Fatalf("result not valid JSON: %v", err)
 	}
 
 	if wi.Priority != 2 {
@@ -378,7 +352,7 @@ func TestGetWorkItem_Error(t *testing.T) {
 
 	h := tools.NewHandlers(mock, "MyProject")
 
-	_, err := h.GetWorkItem(context.Background(), 42, "")
+	_, _, err := h.GetWorkItem(context.Background(), 42, "")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -393,7 +367,7 @@ func TestListWorkItems_Error(t *testing.T) {
 
 	h := tools.NewHandlers(mock, "MyProject")
 
-	_, err := h.ListWorkItems(context.Background(), "query", "")
+	_, _, err := h.ListWorkItems(context.Background(), "query", "")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -408,7 +382,7 @@ func TestListMyWorkItems_Error(t *testing.T) {
 
 	h := tools.NewHandlers(mock, "MyProject")
 
-	_, err := h.ListMyWorkItems(context.Background(), "")
+	_, _, err := h.ListMyWorkItems(context.Background(), "")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -425,7 +399,7 @@ func TestCreateWorkItem_Error(t *testing.T) {
 
 	h := tools.NewHandlers(mock, "MyProject")
 
-	_, err := h.CreateWorkItem(context.Background(), "Bug", "Title", client.CreateOptions{}, "")
+	_, _, err := h.CreateWorkItem(context.Background(), "Bug", "Title", client.CreateOptions{}, "")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -442,7 +416,7 @@ func TestUpdateWorkItem_Error(t *testing.T) {
 
 	h := tools.NewHandlers(mock, "MyProject")
 
-	_, err := h.UpdateWorkItem(context.Background(), 42, client.UpdateOptions{}, "")
+	_, _, err := h.UpdateWorkItem(context.Background(), 42, client.UpdateOptions{}, "")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -478,7 +452,7 @@ func TestProject_UsesOverride(t *testing.T) {
 
 	h := tools.NewHandlers(mock, "DefaultProject")
 
-	_, err := h.GetWorkItem(context.Background(), 1, "OverrideProject")
+	_, _, err := h.GetWorkItem(context.Background(), 1, "OverrideProject")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -499,7 +473,7 @@ func TestProject_UsesDefault(t *testing.T) {
 
 	h := tools.NewHandlers(mock, "DefaultProject")
 
-	_, err := h.GetWorkItem(context.Background(), 1, "")
+	_, _, err := h.GetWorkItem(context.Background(), 1, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

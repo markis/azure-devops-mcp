@@ -3,8 +3,8 @@ package tools
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/markis/azure-devops-mcp/internal/client"
 )
@@ -21,57 +21,64 @@ func NewHandlers(ado client.ADOClient, defaultProject string) *Handlers {
 }
 
 // GetWorkItem fetches a single work item by ID.
-func (h *Handlers) GetWorkItem(ctx context.Context, id int, project string) (string, error) {
+// Returns the work item, a human-readable markdown representation, and any error.
+func (h *Handlers) GetWorkItem(ctx context.Context, id int, project string) (*client.WorkItem, string, error) {
 	wi, err := h.ado.GetWorkItem(ctx, h.project(project), id)
 	if err != nil {
-		return "", err
+		return nil, "", err
 	}
 
-	return marshal(wi)
+	return wi, formatWorkItem(wi), nil
 }
 
 // ListWorkItems runs a WIQL query and returns matching work items.
-func (h *Handlers) ListWorkItems(ctx context.Context, wiql, project string) (string, error) {
+// Returns the work items, a human-readable markdown representation, and any error.
+func (h *Handlers) ListWorkItems(
+	ctx context.Context, wiql, project string,
+) ([]*client.WorkItemSummary, string, error) {
 	items, err := h.ado.ListWorkItems(ctx, h.project(project), wiql)
 	if err != nil {
-		return "", err
+		return nil, "", err
 	}
 
-	return marshal(items)
+	return items, formatWorkItemSummaries(items), nil
 }
 
 // ListMyWorkItems returns active work items assigned to the current user.
-func (h *Handlers) ListMyWorkItems(ctx context.Context, project string) (string, error) {
+// Returns the work items, a human-readable markdown representation, and any error.
+func (h *Handlers) ListMyWorkItems(ctx context.Context, project string) ([]*client.WorkItemSummary, string, error) {
 	items, err := h.ado.ListMyWorkItems(ctx, h.project(project))
 	if err != nil {
-		return "", err
+		return nil, "", err
 	}
 
-	return marshal(items)
+	return items, formatWorkItemSummaries(items), nil
 }
 
 // CreateWorkItem creates a new work item of the given type with the given title.
+// Returns the created work item, a human-readable confirmation message, and any error.
 func (h *Handlers) CreateWorkItem(
 	ctx context.Context, workItemType, title string, opts client.CreateOptions, project string,
-) (string, error) {
+) (*client.WorkItem, string, error) {
 	wi, err := h.ado.CreateWorkItem(ctx, h.project(project), workItemType, title, opts)
 	if err != nil {
-		return "", err
+		return nil, "", err
 	}
 
-	return marshal(wi)
+	return wi, formatWorkItemCreated(wi), nil
 }
 
 // UpdateWorkItem patches fields on an existing work item.
+// Returns the updated work item, a human-readable confirmation message, and any error.
 func (h *Handlers) UpdateWorkItem(
 	ctx context.Context, id int, opts client.UpdateOptions, project string,
-) (string, error) {
+) (*client.WorkItem, string, error) {
 	wi, err := h.ado.UpdateWorkItem(ctx, h.project(project), id, opts)
 	if err != nil {
-		return "", err
+		return nil, "", err
 	}
 
-	return marshal(wi)
+	return wi, formatWorkItemUpdated(wi), nil
 }
 
 // AddComment adds a comment to a work item and returns a confirmation message.
@@ -92,12 +99,72 @@ func (h *Handlers) project(override string) string {
 	return h.defaultProject
 }
 
-// marshal serializes v to a JSON string, returning an error on failure.
-func marshal(v any) (string, error) {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return "", fmt.Errorf("serializing result: %w", err)
+// formatWorkItem converts a work item to human-readable text.
+// Used for detailed display (get operations).
+func formatWorkItem(wi *client.WorkItem) string {
+	var b strings.Builder
+
+	fmt.Fprintf(&b, "Work Item #%d: %s\n", wi.ID, wi.Title)
+	fmt.Fprintf(&b, "Type: %s | State: %s", wi.Type, wi.State)
+
+	if wi.AssignedTo != "" {
+		fmt.Fprintf(&b, " | Assigned: %s", wi.AssignedTo)
 	}
 
-	return string(b), nil
+	if wi.StoryPoints > 0 {
+		fmt.Fprintf(&b, " | Story Points: %.0f", wi.StoryPoints)
+	}
+
+	b.WriteString("\n")
+
+	if wi.Description != "" {
+		fmt.Fprintf(&b, "\nDescription: %s\n", wi.Description)
+	}
+
+	if wi.AcceptanceCriteria != "" {
+		fmt.Fprintf(&b, "\nAcceptance Criteria: %s\n", wi.AcceptanceCriteria)
+	}
+
+	if wi.Tags != "" {
+		fmt.Fprintf(&b, "\nTags: %s\n", wi.Tags)
+	}
+
+	return b.String()
+}
+
+// formatWorkItemCreated returns a simple confirmation message for created work items.
+func formatWorkItemCreated(wi *client.WorkItem) string {
+	return fmt.Sprintf("Created work item #%d: %s (Type: %s, State: %s)", wi.ID, wi.Title, wi.Type, wi.State)
+}
+
+// formatWorkItemUpdated returns a simple confirmation message for updated work items.
+func formatWorkItemUpdated(wi *client.WorkItem) string {
+	return fmt.Sprintf("Updated work item #%d: %s (State: %s)", wi.ID, wi.Title, wi.State)
+}
+
+// formatWorkItemSummaries converts a list of work item summaries to human-readable text.
+func formatWorkItemSummaries(items []*client.WorkItemSummary) string {
+	if len(items) == 0 {
+		return "No work items found."
+	}
+
+	var b strings.Builder
+
+	fmt.Fprintf(&b, "Found %d work item(s):\n\n", len(items))
+
+	for _, wi := range items {
+		fmt.Fprintf(&b, "#%d: %s (Type: %s, State: %s", wi.ID, wi.Title, wi.Type, wi.State)
+
+		if wi.AssignedTo != "" {
+			fmt.Fprintf(&b, ", Assigned: %s", wi.AssignedTo)
+		}
+
+		if wi.StoryPoints > 0 {
+			fmt.Fprintf(&b, ", Points: %.0f", wi.StoryPoints)
+		}
+
+		b.WriteString(")\n")
+	}
+
+	return b.String()
 }
