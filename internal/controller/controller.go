@@ -51,13 +51,14 @@ func RegisterTools(srv *mcp.Server, h *tools.Handlers) {
 	registerAddComment(srv, h)
 }
 
+// getWorkItemInput is the input structure for the get_work_item tool.
+type getWorkItemInput struct {
+	ID      FlexID `json:"id"                jsonschema:"work item ID or reference (required)"`
+	Project string `json:"project,omitempty" jsonschema:"project name (optional, uses server default)"`
+}
+
 // registerGetWorkItem registers the get_work_item tool.
 func registerGetWorkItem(srv *mcp.Server, h *tools.Handlers) {
-	type getWorkItemInput struct {
-		ID      int    `json:"id"                jsonschema:"the numeric ID of the work item to retrieve (required)"`
-		Project string `json:"project,omitempty" jsonschema:"project name (optional, uses server default)"`
-	}
-
 	mcp.AddTool(srv, &mcp.Tool{
 		Name: "get_work_item",
 		Description: "Fetch a single Azure DevOps work item by numeric ID. " +
@@ -65,7 +66,10 @@ func registerGetWorkItem(srv *mcp.Server, h *tools.Handlers) {
 	}, func(
 		ctx context.Context, _ *mcp.CallToolRequest, in getWorkItemInput,
 	) (*mcp.CallToolResult, *client.WorkItem, error) {
-		if in.ID <= 0 {
+		// Cache type conversions
+		id := int(in.ID)
+
+		if id <= 0 {
 			return &mcp.CallToolResult{
 				IsError: true,
 				Content: []mcp.Content{&mcp.TextContent{
@@ -74,13 +78,13 @@ func registerGetWorkItem(srv *mcp.Server, h *tools.Handlers) {
 			}, nil, nil
 		}
 
-		workItem, text, err := h.GetWorkItem(ctx, in.ID, in.Project)
+		workItem, text, err := h.GetWorkItem(ctx, id, in.Project)
 		if err != nil {
 			return &mcp.CallToolResult{
 				IsError: true,
 				Content: []mcp.Content{&mcp.TextContent{
 					Text: fmt.Sprintf(
-						"could not retrieve work item %d: check the ID and project", in.ID,
+						"could not retrieve work item %d: check the ID and project", id,
 					),
 				}},
 			}, nil, err
@@ -168,20 +172,21 @@ func registerListMyWorkItems(srv *mcp.Server, h *tools.Handlers) {
 	})
 }
 
+// createWorkItemInput is the input structure for the create_work_item tool.
+type createWorkItemInput struct {
+	Type             string    `json:"type"                        jsonschema:"work item type (required)"`
+	Title            string    `json:"title"                       jsonschema:"work item title (required)"`
+	Description      string    `json:"description,omitempty"       jsonschema:"detailed description in plain text or HTML"`
+	AssignedTo       string    `json:"assigned_to,omitempty"       jsonschema:"email or display name to assign to"`
+	Tags             string    `json:"tags,omitempty"              jsonschema:"semicolon-separated tags"`
+	StoryPoints      FlexFloat `json:"story_points,omitempty"      jsonschema:"story points estimate (for User Stories)"`
+	OriginalEstimate FlexFloat `json:"original_estimate,omitempty" jsonschema:"time estimate in hours (for Tasks)"`
+	Size             string    `json:"size,omitempty"              jsonschema:"t-shirt size (S, M, L, XL)"`
+	Project          string    `json:"project,omitempty"           jsonschema:"project name (optional)"`
+}
+
 // registerCreateWorkItem registers the create_work_item tool.
 func registerCreateWorkItem(srv *mcp.Server, h *tools.Handlers) {
-	type createWorkItemInput struct {
-		Type             string  `json:"type"                        jsonschema:"work item type (required)"`
-		Title            string  `json:"title"                       jsonschema:"work item title (required)"`
-		Description      string  `json:"description,omitempty"       jsonschema:"detailed description in plain text or HTML"`
-		AssignedTo       string  `json:"assigned_to,omitempty"       jsonschema:"email or display name to assign to"`
-		Tags             string  `json:"tags,omitempty"              jsonschema:"semicolon-separated tags"`
-		StoryPoints      float64 `json:"story_points,omitempty"      jsonschema:"story points estimate (for User Stories)"`
-		OriginalEstimate float64 `json:"original_estimate,omitempty" jsonschema:"time estimate in hours (for Tasks)"`
-		Size             string  `json:"size,omitempty"              jsonschema:"t-shirt size (S, M, L, XL)"`
-		Project          string  `json:"project,omitempty"           jsonschema:"project name (optional)"`
-	}
-
 	mcp.AddTool(srv, &mcp.Tool{
 		Name: "create_work_item",
 		Description: "Create a new Azure DevOps work item. " +
@@ -199,12 +204,16 @@ func registerCreateWorkItem(srv *mcp.Server, h *tools.Handlers) {
 			}, nil, nil
 		}
 
+		// Cache type conversions
+		storyPoints := float64(in.StoryPoints)
+		originalEstimate := float64(in.OriginalEstimate)
+
 		opts := client.CreateOptions{
 			Description:      in.Description,
 			AssignedTo:       in.AssignedTo,
 			Tags:             in.Tags,
-			StoryPoints:      in.StoryPoints,
-			OriginalEstimate: in.OriginalEstimate,
+			StoryPoints:      storyPoints,
+			OriginalEstimate: originalEstimate,
 			Size:             in.Size,
 		}
 
@@ -224,28 +233,34 @@ func registerCreateWorkItem(srv *mcp.Server, h *tools.Handlers) {
 	})
 }
 
+// updateWorkItemInput is the input structure for the update_work_item tool.
+type updateWorkItemInput struct {
+	ID                 FlexID    `json:"id"                            jsonschema:"work item ID or reference (required)"`
+	Title              string    `json:"title,omitempty"               jsonschema:"new title for the work item"`
+	State              string    `json:"state,omitempty"               jsonschema:"new state"`
+	AssignedTo         string    `json:"assigned_to,omitempty"         jsonschema:"email or display name to reassign to"`
+	Description        string    `json:"description,omitempty"         jsonschema:"new description in plain text or HTML"`
+	AcceptanceCriteria string    `json:"acceptance_criteria,omitempty" jsonschema:"acceptance criteria for work item"`
+	StoryPoints        FlexFloat `json:"story_points,omitempty"        jsonschema:"story points estimate"`
+	OriginalEstimate   FlexFloat `json:"original_estimate,omitempty"   jsonschema:"time estimate in hours"`
+	Size               string    `json:"size,omitempty"                jsonschema:"t-shirt size (S, M, L, XL)"`
+	Project            string    `json:"project,omitempty"             jsonschema:"project name (optional)"`
+}
+
 // registerUpdateWorkItem registers the update_work_item tool.
 func registerUpdateWorkItem(srv *mcp.Server, h *tools.Handlers) {
-	type updateWorkItemInput struct {
-		ID                 int     `json:"id"                            jsonschema:"work item ID to update (required)"`
-		Title              string  `json:"title,omitempty"               jsonschema:"new title for the work item"`
-		State              string  `json:"state,omitempty"               jsonschema:"new state"`
-		AssignedTo         string  `json:"assigned_to,omitempty"         jsonschema:"email or display name to reassign to"`
-		Description        string  `json:"description,omitempty"         jsonschema:"new description in plain text or HTML"`
-		AcceptanceCriteria string  `json:"acceptance_criteria,omitempty" jsonschema:"acceptance criteria for work item"`
-		StoryPoints        float64 `json:"story_points,omitempty"        jsonschema:"story points estimate"`
-		OriginalEstimate   float64 `json:"original_estimate,omitempty"   jsonschema:"time estimate in hours"`
-		Size               string  `json:"size,omitempty"                jsonschema:"t-shirt size (S, M, L, XL)"`
-		Project            string  `json:"project,omitempty"             jsonschema:"project name (optional)"`
-	}
-
 	mcp.AddTool(srv, &mcp.Tool{
 		Name: "update_work_item",
 		Description: "Update fields on an existing Azure DevOps work item. " +
 			"Provide the work item ID and any fields to update. " +
 			"At least one field must be provided. Returns the updated work item details.",
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, in updateWorkItemInput) (*mcp.CallToolResult, any, error) {
-		if in.ID <= 0 {
+		// Cache type conversions
+		id := int(in.ID)
+		storyPoints := float64(in.StoryPoints)
+		originalEstimate := float64(in.OriginalEstimate)
+
+		if id <= 0 {
 			return &mcp.CallToolResult{
 				IsError: true,
 				Content: []mcp.Content{&mcp.TextContent{
@@ -260,18 +275,18 @@ func registerUpdateWorkItem(srv *mcp.Server, h *tools.Handlers) {
 			AssignedTo:         in.AssignedTo,
 			Description:        in.Description,
 			AcceptanceCriteria: in.AcceptanceCriteria,
-			StoryPoints:        in.StoryPoints,
-			OriginalEstimate:   in.OriginalEstimate,
+			StoryPoints:        storyPoints,
+			OriginalEstimate:   originalEstimate,
 			Size:               in.Size,
 		}
 
-		workItem, text, err := h.UpdateWorkItem(ctx, in.ID, opts, in.Project)
+		workItem, text, err := h.UpdateWorkItem(ctx, id, opts, in.Project)
 		if err != nil {
 			return &mcp.CallToolResult{
 				IsError: true,
 				Content: []mcp.Content{&mcp.TextContent{
 					Text: fmt.Sprintf(
-						"could not update work item %d: check the ID and fields", in.ID,
+						"could not update work item %d: check the ID and fields", id,
 					),
 				}},
 			}, nil, err
@@ -283,20 +298,24 @@ func registerUpdateWorkItem(srv *mcp.Server, h *tools.Handlers) {
 	})
 }
 
+// addCommentInput is the input structure for the add_comment tool.
+type addCommentInput struct {
+	ID      FlexID `json:"id"                jsonschema:"work item ID or reference (required)"`
+	Text    string `json:"text"              jsonschema:"comment text in plain text or HTML (required)"`
+	Project string `json:"project,omitempty" jsonschema:"project name (optional, uses server default)"`
+}
+
 // registerAddComment registers the add_comment tool.
 func registerAddComment(srv *mcp.Server, h *tools.Handlers) {
-	type addCommentInput struct {
-		ID      int    `json:"id"                jsonschema:"numeric ID of the work item to comment on (required)"`
-		Text    string `json:"text"              jsonschema:"comment text in plain text or HTML (required)"`
-		Project string `json:"project,omitempty" jsonschema:"project name (optional, uses server default)"`
-	}
-
 	mcp.AddTool(srv, &mcp.Tool{
 		Name: "add_comment",
 		Description: "Add a comment to an Azure DevOps work item. " +
 			"Comments are visible in the work item's discussion section. Returns confirmation of the added comment.",
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, in addCommentInput) (*mcp.CallToolResult, any, error) {
-		if in.ID <= 0 {
+		// Cache type conversion
+		id := int(in.ID)
+
+		if id <= 0 {
 			return &mcp.CallToolResult{
 				IsError: true,
 				Content: []mcp.Content{&mcp.TextContent{
@@ -314,13 +333,13 @@ func registerAddComment(srv *mcp.Server, h *tools.Handlers) {
 			}, nil, nil
 		}
 
-		text, err := h.AddComment(ctx, in.ID, in.Text, in.Project)
+		text, err := h.AddComment(ctx, id, in.Text, in.Project)
 		if err != nil {
 			return &mcp.CallToolResult{
 				IsError: true,
 				Content: []mcp.Content{&mcp.TextContent{
 					Text: fmt.Sprintf(
-						"could not add comment to work item %d: check the ID and permissions", in.ID,
+						"could not add comment to work item %d: check the ID and permissions", id,
 					),
 				}},
 			}, nil, err
