@@ -376,3 +376,35 @@ func TestIntegration_FlexID_Conversions(t *testing.T) {
 		})
 	}
 }
+
+func TestIntegration_ToolsList(t *testing.T) {
+	setup := setupTestServer(t)
+
+	// Call tools/list
+	result, err := setup.clientSession.ListTools(setup.ctx, &mcp.ListToolsParams{})
+
+	// Validate response
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.Len(t, result.Tools, 6, "should have 6 registered tools")
+
+	// Extract tool names
+	toolNames := make([]string, len(result.Tools))
+	for i, tool := range result.Tools {
+		toolNames[i] = tool.Name
+	}
+
+	// Verify all expected tools are present
+	expectedTools := []string{
+		"get_work_item",
+		"list_work_items",
+		"list_my_work_items",
+		"create_work_item",
+		"update_work_item",
+		"add_comment",
+	}
+
+	for _, expected := range expectedTools {
+		require.Contains(t, toolNames, expected, "tool %s should be registered", expected)
+	}
+}
