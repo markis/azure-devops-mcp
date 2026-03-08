@@ -273,22 +273,33 @@ func TestIntegration_CreateWorkItem(t *testing.T) {
 	setup := setupTestServer(t)
 
 	// Configure mock
-	setup.mockADO.CreateWorkItemFn = func(
-		_ context.Context, project, workItemType, title string, opts client.CreateOptions,
-	) (*client.WorkItem, error) {
-		require.Equal(t, "TestProject", project)
-		require.Equal(t, "Bug", workItemType)
-		require.Equal(t, "New Bug", title)
-		require.Equal(t, "Bug description", opts.Description)
+	setup.mockWIT.CreateWorkItemFn = func(_ context.Context, args workitemtracking.CreateWorkItemArgs) (*workitemtracking.WorkItem, error) {
+		require.NotNil(t, args.Project)
+		require.NotNil(t, args.Type)
+		require.Equal(t, "TestProject", *args.Project)
+		require.Equal(t, "Bug", *args.Type)
 
-		return &client.WorkItem{
-			WorkItemSummary: client.WorkItemSummary{
-				ID:    100,
-				Title: title,
-				Type:  workItemType,
-				State: "New",
+		// Extract title from document
+		var title string
+		if args.Document != nil {
+			for _, op := range *args.Document {
+				if op.Path != nil && *op.Path == "/fields/System.Title" {
+					title = op.Value.(string)
+					break
+				}
+			}
+		}
+		require.Equal(t, "New Bug", title)
+
+		id := 100
+		return &workitemtracking.WorkItem{
+			Id: &id,
+			Fields: &map[string]interface{}{
+				"System.Title":        title,
+				"System.WorkItemType": *args.Type,
+				"System.State":        "New",
+				"System.Description":  "Bug description",
 			},
-			Description: opts.Description,
 		}, nil
 	}
 
