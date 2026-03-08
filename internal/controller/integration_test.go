@@ -165,13 +165,39 @@ func TestIntegration_ListWorkItems(t *testing.T) {
 	setup := setupTestServer(t)
 
 	// Configure mock
-	setup.mockADO.ListWorkItemsFn = func(_ context.Context, project, query string) ([]*client.WorkItemSummary, error) {
-		require.Equal(t, "TestProject", project)
-		require.Contains(t, query, "SELECT")
+	setup.mockWIT.QueryByWiqlFn = func(_ context.Context, args workitemtracking.QueryByWiqlArgs) (*workitemtracking.WorkItemQueryResult, error) {
+		require.NotNil(t, args.Project)
+		require.NotNil(t, args.Wiql)
+		require.Equal(t, "TestProject", *args.Project)
+		require.Contains(t, *args.Wiql.Query, "SELECT")
 
-		return []*client.WorkItemSummary{
-			{ID: 1, Title: "Item 1", State: "Active", Type: "Bug"},
-			{ID: 2, Title: "Item 2", State: "Resolved", Type: "Task"},
+		id1, id2 := 1, 2
+		return &workitemtracking.WorkItemQueryResult{
+			WorkItems: &[]workitemtracking.WorkItemReference{
+				{Id: &id1},
+				{Id: &id2},
+			},
+		}, nil
+	}
+
+	// Mock GetWorkItem calls for the IDs returned by WIQL query
+	setup.mockWIT.GetWorkItemFn = func(_ context.Context, args workitemtracking.GetWorkItemArgs) (*workitemtracking.WorkItem, error) {
+		id := *args.Id
+		title := fmt.Sprintf("Item %d", id)
+		state := "Active"
+		wiType := "Bug"
+		if id == 2 {
+			state = "Resolved"
+			wiType = "Task"
+		}
+
+		return &workitemtracking.WorkItem{
+			Id: &id,
+			Fields: &map[string]interface{}{
+				"System.Title":        title,
+				"System.State":        state,
+				"System.WorkItemType": wiType,
+			},
 		}, nil
 	}
 
