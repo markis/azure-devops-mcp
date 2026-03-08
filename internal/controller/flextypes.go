@@ -86,7 +86,7 @@ func (f FlexID) MarshalJSON() ([]byte, error) {
 }
 
 // JSONSchemaExtend customizes the JSON Schema to accept both integer and string types.
-func (FlexID) JSONSchemaExtend(schema *map[string]any) {
+func (*FlexID) JSONSchemaExtend(schema *map[string]any) {
 	(*schema)["oneOf"] = []map[string]any{
 		{"type": "integer"},
 		{"type": "string"},
