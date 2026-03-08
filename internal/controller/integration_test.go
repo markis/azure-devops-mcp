@@ -225,11 +225,30 @@ func TestIntegration_ListMyWorkItems(t *testing.T) {
 	setup := setupTestServer(t)
 
 	// Configure mock
-	setup.mockADO.ListMyWorkItemsFn = func(_ context.Context, project string) ([]*client.WorkItemSummary, error) {
-		require.Equal(t, "TestProject", project)
+	setup.mockWIT.QueryByWiqlFn = func(_ context.Context, args workitemtracking.QueryByWiqlArgs) (*workitemtracking.WorkItemQueryResult, error) {
+		require.NotNil(t, args.Project)
+		require.Equal(t, "TestProject", *args.Project)
 
-		return []*client.WorkItemSummary{
-			{ID: 5, Title: "My Task", State: "Active", Type: "Task", AssignedTo: "me@example.com"},
+		id := 5
+		return &workitemtracking.WorkItemQueryResult{
+			WorkItems: &[]workitemtracking.WorkItemReference{
+				{Id: &id},
+			},
+		}, nil
+	}
+
+	setup.mockWIT.GetWorkItemFn = func(_ context.Context, args workitemtracking.GetWorkItemArgs) (*workitemtracking.WorkItem, error) {
+		id := *args.Id
+		return &workitemtracking.WorkItem{
+			Id: &id,
+			Fields: &map[string]interface{}{
+				"System.Title":        "My Task",
+				"System.State":        "Active",
+				"System.WorkItemType": "Task",
+				"System.AssignedTo": map[string]interface{}{
+					"displayName": "me@example.com",
+				},
+			},
 		}, nil
 	}
 
