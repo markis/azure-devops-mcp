@@ -1,4 +1,4 @@
-//nolint:lll,revive,wsl // Generated mock with long lines and many methods
+//nolint:lll,revive // Generated mock with long lines and many methods
 package test
 
 import (
@@ -25,6 +25,7 @@ func (m *mockWITClient) GetWorkItem(ctx context.Context, args workitemtracking.G
 	if m.GetWorkItemFn != nil {
 		return m.GetWorkItemFn(ctx, args)
 	}
+
 	panic("GetWorkItemFn not set")
 }
 
@@ -33,6 +34,7 @@ func (m *mockWITClient) QueryByWiql(ctx context.Context, args workitemtracking.Q
 	if m.QueryByWiqlFn != nil {
 		return m.QueryByWiqlFn(ctx, args)
 	}
+
 	panic("QueryByWiqlFn not set")
 }
 
@@ -41,6 +43,7 @@ func (m *mockWITClient) CreateWorkItem(ctx context.Context, args workitemtrackin
 	if m.CreateWorkItemFn != nil {
 		return m.CreateWorkItemFn(ctx, args)
 	}
+
 	panic("CreateWorkItemFn not set")
 }
 
@@ -49,6 +52,7 @@ func (m *mockWITClient) UpdateWorkItem(ctx context.Context, args workitemtrackin
 	if m.UpdateWorkItemFn != nil {
 		return m.UpdateWorkItemFn(ctx, args)
 	}
+
 	panic("UpdateWorkItemFn not set")
 }
 
@@ -57,6 +61,7 @@ func (m *mockWITClient) AddComment(ctx context.Context, args workitemtracking.Ad
 	if m.AddCommentFn != nil {
 		return m.AddCommentFn(ctx, args)
 	}
+
 	panic("AddCommentFn not set")
 }
 
@@ -307,6 +312,7 @@ func (m *mockWITClient) GetWorkItemsBatch(ctx context.Context, args workitemtrac
 	if m.GetWorkItemsBatchFn != nil {
 		return m.GetWorkItemsBatchFn(ctx, args)
 	}
+
 	panic("GetWorkItemsBatchFn not set")
 }
 

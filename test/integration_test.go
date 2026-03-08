@@ -1,4 +1,4 @@
-//nolint:lll,wsl,modernize // Integration tests with long mock setup lines
+//nolint:lll // Integration tests with long mock setup lines
 package test
 
 import (
@@ -85,11 +85,11 @@ func TestIntegration_GetWorkItem(t *testing.T) {
 
 		return &workitemtracking.WorkItem{
 			Id: &id,
-			Fields: &map[string]interface{}{
+			Fields: &map[string]any{
 				"System.Title":        title,
 				"System.State":        state,
 				"System.WorkItemType": wiType,
-				"System.AssignedTo": map[string]interface{}{
+				"System.AssignedTo": map[string]any{
 					"displayName": assignedTo,
 				},
 				"System.Description": "Test description",
@@ -173,6 +173,7 @@ func TestIntegration_ListWorkItems(t *testing.T) {
 		require.Contains(t, *args.Wiql.Query, "SELECT")
 
 		id1, id2 := 1, 2
+
 		return &workitemtracking.WorkItemQueryResult{
 			WorkItems: &[]workitemtracking.WorkItemReference{
 				{Id: &id1},
@@ -182,12 +183,13 @@ func TestIntegration_ListWorkItems(t *testing.T) {
 	}
 
 	// Mock GetWorkItemsBatch for batch fetch
-	setup.mockWIT.GetWorkItemsBatchFn = func(_ context.Context, args workitemtracking.GetWorkItemsBatchArgs) (*[]workitemtracking.WorkItem, error) {
+	setup.mockWIT.GetWorkItemsBatchFn = func(_ context.Context, _ workitemtracking.GetWorkItemsBatchArgs) (*[]workitemtracking.WorkItem, error) {
 		id1, id2 := 1, 2
+
 		return &[]workitemtracking.WorkItem{
 			{
 				Id: &id1,
-				Fields: &map[string]interface{}{
+				Fields: &map[string]any{
 					"System.Title":        "Item 1",
 					"System.State":        "Active",
 					"System.WorkItemType": "Bug",
@@ -195,7 +197,7 @@ func TestIntegration_ListWorkItems(t *testing.T) {
 			},
 			{
 				Id: &id2,
-				Fields: &map[string]interface{}{
+				Fields: &map[string]any{
 					"System.Title":        "Item 2",
 					"System.State":        "Resolved",
 					"System.WorkItemType": "Task",
@@ -233,6 +235,7 @@ func TestIntegration_ListMyWorkItems(t *testing.T) {
 		require.Equal(t, "TestProject", *args.Project)
 
 		id := 5
+
 		return &workitemtracking.WorkItemQueryResult{
 			WorkItems: &[]workitemtracking.WorkItemReference{
 				{Id: &id},
@@ -240,16 +243,17 @@ func TestIntegration_ListMyWorkItems(t *testing.T) {
 		}, nil
 	}
 
-	setup.mockWIT.GetWorkItemsBatchFn = func(_ context.Context, args workitemtracking.GetWorkItemsBatchArgs) (*[]workitemtracking.WorkItem, error) {
+	setup.mockWIT.GetWorkItemsBatchFn = func(_ context.Context, _ workitemtracking.GetWorkItemsBatchArgs) (*[]workitemtracking.WorkItem, error) {
 		id := 5
+
 		return &[]workitemtracking.WorkItem{
 			{
 				Id: &id,
-				Fields: &map[string]interface{}{
+				Fields: &map[string]any{
 					"System.Title":        "My Task",
 					"System.State":        "Active",
 					"System.WorkItemType": "Task",
-					"System.AssignedTo": map[string]interface{}{
+					"System.AssignedTo": map[string]any{
 						"displayName": "me@example.com",
 					},
 				},
@@ -286,6 +290,7 @@ func TestIntegration_CreateWorkItem(t *testing.T) {
 
 		// Extract title from document
 		var title string
+
 		if args.Document != nil {
 			for _, op := range *args.Document {
 				if op.Path != nil && *op.Path == "/fields/System.Title" {
@@ -294,12 +299,14 @@ func TestIntegration_CreateWorkItem(t *testing.T) {
 				}
 			}
 		}
+
 		require.Equal(t, "New Bug", title)
 
 		id := 100
+
 		return &workitemtracking.WorkItem{
 			Id: &id,
-			Fields: &map[string]interface{}{
+			Fields: &map[string]any{
 				"System.Title":        title,
 				"System.WorkItemType": *args.Type,
 				"System.State":        "New",
@@ -342,11 +349,13 @@ func TestIntegration_UpdateWorkItem(t *testing.T) {
 
 		// Extract updated fields from document
 		var title, state string
+
 		if args.Document != nil {
 			for _, op := range *args.Document {
 				if op.Path == nil {
 					continue
 				}
+
 				switch *op.Path {
 				case "/fields/System.Title":
 					title = op.Value.(string) //nolint:forcetypeassert // Test mock data
@@ -357,9 +366,10 @@ func TestIntegration_UpdateWorkItem(t *testing.T) {
 		}
 
 		id := *args.Id
+
 		return &workitemtracking.WorkItem{
 			Id: &id,
-			Fields: &map[string]interface{}{
+			Fields: &map[string]any{
 				"System.Title":        title,
 				"System.State":        state,
 				"System.WorkItemType": "Bug",
@@ -402,6 +412,7 @@ func TestIntegration_AddComment(t *testing.T) {
 		require.Equal(t, "Test comment", *args.Request.Text)
 
 		id := 1
+
 		return &workitemtracking.Comment{
 			Id:   &id,
 			Text: args.Request.Text,
@@ -433,12 +444,14 @@ func TestIntegration_FlexID_Conversions(t *testing.T) {
 
 	// Configure mock to track received IDs
 	var receivedID int
+
 	setup.mockWIT.GetWorkItemFn = func(_ context.Context, args workitemtracking.GetWorkItemArgs) (*workitemtracking.WorkItem, error) {
 		receivedID = *args.Id
 		id := *args.Id
+
 		return &workitemtracking.WorkItem{
 			Id: &id,
-			Fields: &map[string]interface{}{
+			Fields: &map[string]any{
 				"System.Title": "Test",
 			},
 		}, nil
