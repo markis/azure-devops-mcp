@@ -299,3 +299,35 @@ func TestIntegration_UpdateWorkItem(t *testing.T) {
 	require.Contains(t, textContent.Text, "Updated Title")
 	require.Contains(t, textContent.Text, "Resolved")
 }
+
+func TestIntegration_AddComment(t *testing.T) {
+	setup := setupTestServer(t)
+
+	// Configure mock
+	setup.mockADO.AddCommentFn = func(_ context.Context, project string, id int, text string) error {
+		require.Equal(t, "TestProject", project)
+		require.Equal(t, 42, id)
+		require.Equal(t, "Test comment", text)
+
+		return nil
+	}
+
+	// Call tool
+	result, err := setup.clientSession.CallTool(setup.ctx, &mcp.CallToolParams{
+		Name: "add_comment",
+		Arguments: map[string]any{
+			"id":   42,
+			"text": "Test comment",
+		},
+	})
+
+	// Validate response
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+	require.Len(t, result.Content, 1)
+
+	textContent, ok := result.Content[0].(*mcp.TextContent)
+	require.True(t, ok)
+	require.NotEmpty(t, textContent.Text)
+	require.Contains(t, textContent.Text, "Comment added")
+}
