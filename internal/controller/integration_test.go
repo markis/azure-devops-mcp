@@ -329,20 +329,35 @@ func TestIntegration_UpdateWorkItem(t *testing.T) {
 	setup := setupTestServer(t)
 
 	// Configure mock
-	setup.mockADO.UpdateWorkItemFn = func(
-		_ context.Context, project string, id int, opts client.UpdateOptions,
-	) (*client.WorkItem, error) {
-		require.Equal(t, "TestProject", project)
-		require.Equal(t, 42, id)
-		require.Equal(t, "Updated Title", opts.Title)
-		require.Equal(t, "Resolved", opts.State)
+	setup.mockWIT.UpdateWorkItemFn = func(_ context.Context, args workitemtracking.UpdateWorkItemArgs) (*workitemtracking.WorkItem, error) {
+		require.NotNil(t, args.Project)
+		require.NotNil(t, args.Id)
+		require.Equal(t, "TestProject", *args.Project)
+		require.Equal(t, 42, *args.Id)
 
-		return &client.WorkItem{
-			WorkItemSummary: client.WorkItemSummary{
-				ID:    id,
-				Title: opts.Title,
-				State: opts.State,
-				Type:  "Bug",
+		// Extract updated fields from document
+		var title, state string
+		if args.Document != nil {
+			for _, op := range *args.Document {
+				if op.Path == nil {
+					continue
+				}
+				switch *op.Path {
+				case "/fields/System.Title":
+					title = op.Value.(string)
+				case "/fields/System.State":
+					state = op.Value.(string)
+				}
+			}
+		}
+
+		id := *args.Id
+		return &workitemtracking.WorkItem{
+			Id: &id,
+			Fields: &map[string]interface{}{
+				"System.Title":        title,
+				"System.State":        state,
+				"System.WorkItemType": "Bug",
 			},
 		}, nil
 	}
