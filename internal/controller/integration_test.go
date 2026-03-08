@@ -2,6 +2,7 @@ package controller_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/markis/azure-devops-mcp/internal/client"
@@ -100,4 +101,49 @@ func TestIntegration_GetWorkItem(t *testing.T) {
 	require.NotEmpty(t, textContent.Text)
 	require.Contains(t, textContent.Text, "Work Item #42")
 	require.Contains(t, textContent.Text, "Test Bug")
+}
+
+func TestIntegration_GetWorkItem_InvalidID(t *testing.T) {
+	setup := setupTestServer(t)
+
+	// Test with negative ID
+	result, err := setup.clientSession.CallTool(setup.ctx, &mcp.CallToolParams{
+		Name: "get_work_item",
+		Arguments: map[string]any{
+			"id": -1,
+		},
+	})
+
+	require.NoError(t, err)
+	require.True(t, result.IsError)
+	require.Len(t, result.Content, 1)
+
+	textContent, ok := result.Content[0].(*mcp.TextContent)
+	require.True(t, ok)
+	require.Contains(t, textContent.Text, "must be a positive integer")
+}
+
+func TestIntegration_GetWorkItem_NotFound(t *testing.T) {
+	setup := setupTestServer(t)
+
+	// Configure mock to return error
+	setup.mockADO.GetWorkItemFn = func(_ context.Context, _ string, id int) (*client.WorkItem, error) {
+		return nil, fmt.Errorf("work item %d not found", id) //nolint:err113 // Dynamic error acceptable in test mock
+	}
+
+	result, err := setup.clientSession.CallTool(setup.ctx, &mcp.CallToolParams{
+		Name: "get_work_item",
+		Arguments: map[string]any{
+			"id": 999,
+		},
+	})
+
+	require.NoError(t, err)
+	require.True(t, result.IsError)
+	require.Len(t, result.Content, 1)
+
+	textContent, ok := result.Content[0].(*mcp.TextContent)
+	require.True(t, ok)
+	// MCP framework uses the error parameter to populate content when err != nil
+	require.Contains(t, textContent.Text, "not found")
 }
