@@ -388,12 +388,19 @@ func TestIntegration_AddComment(t *testing.T) {
 	setup := setupTestServer(t)
 
 	// Configure mock
-	setup.mockADO.AddCommentFn = func(_ context.Context, project string, id int, text string) error {
-		require.Equal(t, "TestProject", project)
-		require.Equal(t, 42, id)
-		require.Equal(t, "Test comment", text)
+	setup.mockWIT.AddCommentFn = func(_ context.Context, args workitemtracking.AddCommentArgs) (*workitemtracking.Comment, error) {
+		require.NotNil(t, args.Project)
+		require.NotNil(t, args.WorkItemId)
+		require.NotNil(t, args.Request)
+		require.Equal(t, "TestProject", *args.Project)
+		require.Equal(t, 42, *args.WorkItemId)
+		require.Equal(t, "Test comment", *args.Request.Text)
 
-		return nil
+		id := 1
+		return &workitemtracking.Comment{
+			Id:   &id,
+			Text: args.Request.Text,
+		}, nil
 	}
 
 	// Call tool
