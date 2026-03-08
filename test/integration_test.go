@@ -7,12 +7,12 @@ import (
 	"testing"
 
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/workitemtracking"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/stretchr/testify/require"
 
 	"github.com/markis/azure-devops-mcp/internal/client"
 	"github.com/markis/azure-devops-mcp/internal/controller"
 	"github.com/markis/azure-devops-mcp/internal/tools"
-	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"github.com/stretchr/testify/require"
 )
 
 type testServerSetup struct {

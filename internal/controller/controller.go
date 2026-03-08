@@ -6,9 +6,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+
 	"github.com/markis/azure-devops-mcp/internal/client"
 	"github.com/markis/azure-devops-mcp/internal/tools"
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // Config holds the configuration required to run the MCP server.

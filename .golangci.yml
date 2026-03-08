@@ -3,6 +3,13 @@ version: "2"
 formatters:
   enable:
     - gofumpt
+    - goimports
+  settings:
+    gofumpt:
+      module-path: github.com/markis/azure-devops-mcp
+    goimports:
+      local-prefixes:
+        - github.com/markis/azure-devops-mcp
 
 linters:
   default: all
