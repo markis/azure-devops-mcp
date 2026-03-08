@@ -1,10 +1,12 @@
 # Azure DevOps MCP Server
 
 [![CI](https://github.com/markis/azure-devops-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/markis/azure-devops-mcp/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/coverage-52.1%25-yellow.svg)](https://github.com/markis/azure-devops-mcp)
+[![Coverage](https://img.shields.io/badge/coverage-77.2%25-brightgreen.svg)](https://github.com/markis/azure-devops-mcp)
 [![Go Version](https://img.shields.io/badge/go-1.26-blue.svg)](https://go.dev/dl/)
 
 MCP (Model Context Protocol) server for Azure DevOps work item management. Allows AI assistants to interact with Azure DevOps work items through a standardized protocol.
+
+**⚡ Faster than the official Azure DevOps MCP server** — this server converts HTML fields (descriptions, acceptance criteria) to Markdown server-side, reducing token usage and improving AI response times.
 
 ## Features
 
@@ -315,11 +317,11 @@ go build -o azure-devops-mcp ./cmd/azure-devops-mcp
 
 ## Test Coverage
 
-Current coverage: **52.1%**
+Current coverage: **77.2%**
 
-- `internal/tools`: 96.8% (business logic)
-- `internal/client`: 51.2% (API helpers)
-- `internal/controller`: 36.5% (MCP wiring)
+- `internal/client`: 85.8% (Azure DevOps API client)
+- `internal/tools`: 83.1% (business logic)
+- `internal/controller`: 69.7% (MCP wiring)
 
 ## Contributing
 
