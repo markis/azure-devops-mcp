@@ -1,5 +1,5 @@
 //nolint:lll,wsl,modernize // Integration tests with long mock setup lines
-package controller_test
+package test
 
 import (
 	"context"
@@ -20,7 +20,7 @@ type testServerSetup struct {
 	client        *mcp.Client
 	serverSession *mcp.ServerSession
 	clientSession *mcp.ClientSession
-	mockWIT       *client.MockWITClient
+	mockWIT       *mockWITClient
 	ctx           context.Context //nolint:containedctx // Test helper convenience
 }
 
@@ -28,7 +28,7 @@ func setupTestServer(t *testing.T) *testServerSetup {
 	t.Helper()
 
 	ctx := context.Background()
-	mockWIT := &client.MockWITClient{}
+	mockWIT := &mockWITClient{}
 	adoClient := client.NewRealADOClientWithWIT(mockWIT)
 	h := tools.NewHandlers(adoClient, "TestProject")
 
