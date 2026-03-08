@@ -1,3 +1,4 @@
+//nolint:lll,revive,wsl // Generated mock with long lines and many methods
 package client
 
 import (
@@ -11,11 +12,12 @@ import (
 // MockWITClient implements workitemtracking.Client for testing.
 // Only implements methods used by RealADOClient.
 type MockWITClient struct {
-	GetWorkItemFn    func(context.Context, workitemtracking.GetWorkItemArgs) (*workitemtracking.WorkItem, error)
-	QueryByWiqlFn    func(context.Context, workitemtracking.QueryByWiqlArgs) (*workitemtracking.WorkItemQueryResult, error)
-	CreateWorkItemFn func(context.Context, workitemtracking.CreateWorkItemArgs) (*workitemtracking.WorkItem, error)
-	UpdateWorkItemFn func(context.Context, workitemtracking.UpdateWorkItemArgs) (*workitemtracking.WorkItem, error)
-	AddCommentFn     func(context.Context, workitemtracking.AddCommentArgs) (*workitemtracking.Comment, error)
+	GetWorkItemFn       func(context.Context, workitemtracking.GetWorkItemArgs) (*workitemtracking.WorkItem, error)
+	GetWorkItemsBatchFn func(context.Context, workitemtracking.GetWorkItemsBatchArgs) (*[]workitemtracking.WorkItem, error)
+	QueryByWiqlFn       func(context.Context, workitemtracking.QueryByWiqlArgs) (*workitemtracking.WorkItemQueryResult, error)
+	CreateWorkItemFn    func(context.Context, workitemtracking.CreateWorkItemArgs) (*workitemtracking.WorkItem, error)
+	UpdateWorkItemFn    func(context.Context, workitemtracking.UpdateWorkItemArgs) (*workitemtracking.WorkItem, error)
+	AddCommentFn        func(context.Context, workitemtracking.AddCommentArgs) (*workitemtracking.Comment, error)
 }
 
 // GetWorkItem delegates to GetWorkItemFn.
@@ -300,8 +302,12 @@ func (m *MockWITClient) GetWorkItems(context.Context, workitemtracking.GetWorkIt
 	panic("GetWorkItems not implemented in mock")
 }
 
-func (m *MockWITClient) GetWorkItemsBatch(context.Context, workitemtracking.GetWorkItemsBatchArgs) (*[]workitemtracking.WorkItem, error) {
-	panic("GetWorkItemsBatch not implemented in mock")
+// GetWorkItemsBatch delegates to GetWorkItemsBatchFn.
+func (m *MockWITClient) GetWorkItemsBatch(ctx context.Context, args workitemtracking.GetWorkItemsBatchArgs) (*[]workitemtracking.WorkItem, error) {
+	if m.GetWorkItemsBatchFn != nil {
+		return m.GetWorkItemsBatchFn(ctx, args)
+	}
+	panic("GetWorkItemsBatchFn not set")
 }
 
 func (m *MockWITClient) GetWorkItemTemplate(context.Context, workitemtracking.GetWorkItemTemplateArgs) (*workitemtracking.WorkItem, error) {

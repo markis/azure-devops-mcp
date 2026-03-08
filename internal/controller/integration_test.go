@@ -1,3 +1,4 @@
+//nolint:lll,wsl,modernize // Integration tests with long mock setup lines
 package controller_test
 
 import (
@@ -180,23 +181,25 @@ func TestIntegration_ListWorkItems(t *testing.T) {
 		}, nil
 	}
 
-	// Mock GetWorkItem calls for the IDs returned by WIQL query
-	setup.mockWIT.GetWorkItemFn = func(_ context.Context, args workitemtracking.GetWorkItemArgs) (*workitemtracking.WorkItem, error) {
-		id := *args.Id
-		title := fmt.Sprintf("Item %d", id)
-		state := "Active"
-		wiType := "Bug"
-		if id == 2 {
-			state = "Resolved"
-			wiType = "Task"
-		}
-
-		return &workitemtracking.WorkItem{
-			Id: &id,
-			Fields: &map[string]interface{}{
-				"System.Title":        title,
-				"System.State":        state,
-				"System.WorkItemType": wiType,
+	// Mock GetWorkItemsBatch for batch fetch
+	setup.mockWIT.GetWorkItemsBatchFn = func(_ context.Context, args workitemtracking.GetWorkItemsBatchArgs) (*[]workitemtracking.WorkItem, error) {
+		id1, id2 := 1, 2
+		return &[]workitemtracking.WorkItem{
+			{
+				Id: &id1,
+				Fields: &map[string]interface{}{
+					"System.Title":        "Item 1",
+					"System.State":        "Active",
+					"System.WorkItemType": "Bug",
+				},
+			},
+			{
+				Id: &id2,
+				Fields: &map[string]interface{}{
+					"System.Title":        "Item 2",
+					"System.State":        "Resolved",
+					"System.WorkItemType": "Task",
+				},
 			},
 		}, nil
 	}
@@ -237,16 +240,18 @@ func TestIntegration_ListMyWorkItems(t *testing.T) {
 		}, nil
 	}
 
-	setup.mockWIT.GetWorkItemFn = func(_ context.Context, args workitemtracking.GetWorkItemArgs) (*workitemtracking.WorkItem, error) {
-		id := *args.Id
-		return &workitemtracking.WorkItem{
-			Id: &id,
-			Fields: &map[string]interface{}{
-				"System.Title":        "My Task",
-				"System.State":        "Active",
-				"System.WorkItemType": "Task",
-				"System.AssignedTo": map[string]interface{}{
-					"displayName": "me@example.com",
+	setup.mockWIT.GetWorkItemsBatchFn = func(_ context.Context, args workitemtracking.GetWorkItemsBatchArgs) (*[]workitemtracking.WorkItem, error) {
+		id := 5
+		return &[]workitemtracking.WorkItem{
+			{
+				Id: &id,
+				Fields: &map[string]interface{}{
+					"System.Title":        "My Task",
+					"System.State":        "Active",
+					"System.WorkItemType": "Task",
+					"System.AssignedTo": map[string]interface{}{
+						"displayName": "me@example.com",
+					},
 				},
 			},
 		}, nil
@@ -284,7 +289,7 @@ func TestIntegration_CreateWorkItem(t *testing.T) {
 		if args.Document != nil {
 			for _, op := range *args.Document {
 				if op.Path != nil && *op.Path == "/fields/System.Title" {
-					title = op.Value.(string)
+					title = op.Value.(string) //nolint:forcetypeassert // Test mock data
 					break
 				}
 			}
@@ -344,9 +349,9 @@ func TestIntegration_UpdateWorkItem(t *testing.T) {
 				}
 				switch *op.Path {
 				case "/fields/System.Title":
-					title = op.Value.(string)
+					title = op.Value.(string) //nolint:forcetypeassert // Test mock data
 				case "/fields/System.State":
-					state = op.Value.(string)
+					state = op.Value.(string) //nolint:forcetypeassert // Test mock data
 				}
 			}
 		}

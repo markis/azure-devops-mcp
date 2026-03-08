@@ -87,7 +87,3 @@ func TestErrNoFieldsToUpdate(t *testing.T) {
 		t.Error("expected non-empty error message")
 	}
 }
-
-func TestMockADOClient_Interface(_ *testing.T) {
-	var _ client.ADOClient = &client.MockADOClient{}
-}

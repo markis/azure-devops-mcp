@@ -1,3 +1,5 @@
+// Package client provides the ADOClient interface, shared types, and implementations
+// for interacting with the Azure DevOps work item tracking API.
 package client
 
 import (
