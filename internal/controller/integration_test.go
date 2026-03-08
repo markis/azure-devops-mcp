@@ -140,8 +140,8 @@ func TestIntegration_GetWorkItem_NotFound(t *testing.T) {
 	setup := setupTestServer(t)
 
 	// Configure mock to return error
-	setup.mockADO.GetWorkItemFn = func(_ context.Context, _ string, id int) (*client.WorkItem, error) {
-		return nil, fmt.Errorf("work item %d not found", id) //nolint:err113 // Dynamic error acceptable in test mock
+	setup.mockWIT.GetWorkItemFn = func(_ context.Context, args workitemtracking.GetWorkItemArgs) (*workitemtracking.WorkItem, error) {
+		return nil, fmt.Errorf("work item %d not found", *args.Id) //nolint:err113 // Dynamic error acceptable in test mock
 	}
 
 	result, err := setup.clientSession.CallTool(setup.ctx, &mcp.CallToolParams{
