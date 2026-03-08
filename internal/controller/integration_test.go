@@ -255,3 +255,47 @@ func TestIntegration_CreateWorkItem(t *testing.T) {
 	require.Contains(t, textContent.Text, "Created work item #100")
 	require.Contains(t, textContent.Text, "New Bug")
 }
+
+func TestIntegration_UpdateWorkItem(t *testing.T) {
+	setup := setupTestServer(t)
+
+	// Configure mock
+	setup.mockADO.UpdateWorkItemFn = func(
+		_ context.Context, project string, id int, opts client.UpdateOptions,
+	) (*client.WorkItem, error) {
+		require.Equal(t, "TestProject", project)
+		require.Equal(t, 42, id)
+		require.Equal(t, "Updated Title", opts.Title)
+		require.Equal(t, "Resolved", opts.State)
+
+		return &client.WorkItem{
+			WorkItemSummary: client.WorkItemSummary{
+				ID:    id,
+				Title: opts.Title,
+				State: opts.State,
+				Type:  "Bug",
+			},
+		}, nil
+	}
+
+	// Call tool
+	result, err := setup.clientSession.CallTool(setup.ctx, &mcp.CallToolParams{
+		Name: "update_work_item",
+		Arguments: map[string]any{
+			"id":    42,
+			"title": "Updated Title",
+			"state": "Resolved",
+		},
+	})
+
+	// Validate response
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+	require.Len(t, result.Content, 1)
+
+	textContent, ok := result.Content[0].(*mcp.TextContent)
+	require.True(t, ok)
+	require.NotEmpty(t, textContent.Text)
+	require.Contains(t, textContent.Text, "Updated Title")
+	require.Contains(t, textContent.Text, "Resolved")
+}
