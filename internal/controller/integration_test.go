@@ -17,7 +17,7 @@ type testServerSetup struct {
 	client        *mcp.Client
 	serverSession *mcp.ServerSession
 	clientSession *mcp.ClientSession
-	mockADO       *client.MockADOClient
+	mockWIT       *client.MockWITClient
 	ctx           context.Context //nolint:containedctx // Test helper convenience
 }
 
@@ -25,8 +25,9 @@ func setupTestServer(t *testing.T) *testServerSetup {
 	t.Helper()
 
 	ctx := context.Background()
-	mock := &client.MockADOClient{}
-	h := tools.NewHandlers(mock, "TestProject")
+	mockWIT := &client.MockWITClient{}
+	adoClient := client.NewRealADOClientWithWIT(mockWIT)
+	h := tools.NewHandlers(adoClient, "TestProject")
 
 	// Create and configure server
 	srv := controller.CreateServer()
@@ -58,7 +59,7 @@ func setupTestServer(t *testing.T) *testServerSetup {
 		client:        mcpClient,
 		serverSession: serverSession,
 		clientSession: clientSession,
-		mockADO:       mock,
+		mockWIT:       mockWIT,
 		ctx:           ctx,
 	}
 }
