@@ -121,6 +121,11 @@ func NewRealADOClient(ctx context.Context, orgURL, pat string) (*RealADOClient, 
 	return &RealADOClient{wit: wit}, nil
 }
 
+// NewRealADOClientWithWIT creates a client with an injected WIT client for testing.
+func NewRealADOClientWithWIT(wit workitemtracking.Client) *RealADOClient {
+	return &RealADOClient{wit: wit}
+}
+
 // GetWorkItem fetches a single work item by ID.
 func (c *RealADOClient) GetWorkItem(ctx context.Context, project string, id int) (*WorkItem, error) {
 	fields := []string{
