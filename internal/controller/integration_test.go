@@ -181,3 +181,32 @@ func TestIntegration_ListWorkItems(t *testing.T) {
 	require.Contains(t, textContent.Text, "Item 1")
 	require.Contains(t, textContent.Text, "Item 2")
 }
+
+func TestIntegration_ListMyWorkItems(t *testing.T) {
+	setup := setupTestServer(t)
+
+	// Configure mock
+	setup.mockADO.ListMyWorkItemsFn = func(_ context.Context, project string) ([]*client.WorkItemSummary, error) {
+		require.Equal(t, "TestProject", project)
+
+		return []*client.WorkItemSummary{
+			{ID: 5, Title: "My Task", State: "Active", Type: "Task", AssignedTo: "me@example.com"},
+		}, nil
+	}
+
+	// Call tool
+	result, err := setup.clientSession.CallTool(setup.ctx, &mcp.CallToolParams{
+		Name:      "list_my_work_items",
+		Arguments: map[string]any{},
+	})
+
+	// Validate response
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+	require.Len(t, result.Content, 1)
+
+	textContent, ok := result.Content[0].(*mcp.TextContent)
+	require.True(t, ok)
+	require.NotEmpty(t, textContent.Text)
+	require.Contains(t, textContent.Text, "My Task")
+}
