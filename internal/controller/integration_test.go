@@ -61,3 +61,43 @@ func setupTestServer(t *testing.T) *testServerSetup {
 		ctx:           ctx,
 	}
 }
+
+func TestIntegration_GetWorkItem(t *testing.T) {
+	setup := setupTestServer(t)
+
+	// Configure mock
+	setup.mockADO.GetWorkItemFn = func(_ context.Context, project string, id int) (*client.WorkItem, error) {
+		require.Equal(t, "TestProject", project)
+		require.Equal(t, 42, id)
+
+		return &client.WorkItem{
+			WorkItemSummary: client.WorkItemSummary{
+				ID:         42,
+				Title:      "Test Bug",
+				State:      "Active",
+				Type:       "Bug",
+				AssignedTo: "test@example.com",
+			},
+			Description: "Test description",
+		}, nil
+	}
+
+	// Call tool
+	result, err := setup.clientSession.CallTool(setup.ctx, &mcp.CallToolParams{
+		Name: "get_work_item",
+		Arguments: map[string]any{
+			"id": 42,
+		},
+	})
+
+	// Validate response
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+	require.Len(t, result.Content, 1)
+
+	textContent, ok := result.Content[0].(*mcp.TextContent)
+	require.True(t, ok, "expected TextContent")
+	require.NotEmpty(t, textContent.Text)
+	require.Contains(t, textContent.Text, "Work Item #42")
+	require.Contains(t, textContent.Text, "Test Bug")
+}
