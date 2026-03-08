@@ -11,19 +11,19 @@ import (
 
 // Handlers holds the ADO client and default project for all tool handlers.
 type Handlers struct {
-	ado            client.ADOClient
+	client         client.ADOClient
 	defaultProject string
 }
 
 // NewHandlers creates a Handlers with the given client and default project.
-func NewHandlers(ado client.ADOClient, defaultProject string) *Handlers {
-	return &Handlers{ado: ado, defaultProject: defaultProject}
+func NewHandlers(client client.ADOClient, defaultProject string) *Handlers {
+	return &Handlers{client: client, defaultProject: defaultProject}
 }
 
 // GetWorkItem fetches a single work item by ID.
 // Returns the work item, a human-readable markdown representation, and any error.
 func (h *Handlers) GetWorkItem(ctx context.Context, id int, project string) (*client.WorkItem, string, error) {
-	wi, err := h.ado.GetWorkItem(ctx, h.project(project), id)
+	wi, err := h.client.GetWorkItem(ctx, h.project(project), id)
 	if err != nil {
 		return nil, "", err
 	}
@@ -36,7 +36,7 @@ func (h *Handlers) GetWorkItem(ctx context.Context, id int, project string) (*cl
 func (h *Handlers) ListWorkItems(
 	ctx context.Context, wiql, project string,
 ) ([]*client.WorkItemSummary, string, error) {
-	items, err := h.ado.ListWorkItems(ctx, h.project(project), wiql)
+	items, err := h.client.ListWorkItems(ctx, h.project(project), wiql)
 	if err != nil {
 		return nil, "", err
 	}
@@ -47,7 +47,7 @@ func (h *Handlers) ListWorkItems(
 // ListMyWorkItems returns active work items assigned to the current user.
 // Returns the work items, a human-readable markdown representation, and any error.
 func (h *Handlers) ListMyWorkItems(ctx context.Context, project string) ([]*client.WorkItemSummary, string, error) {
-	items, err := h.ado.ListMyWorkItems(ctx, h.project(project))
+	items, err := h.client.ListMyWorkItems(ctx, h.project(project))
 	if err != nil {
 		return nil, "", err
 	}
@@ -60,7 +60,7 @@ func (h *Handlers) ListMyWorkItems(ctx context.Context, project string) ([]*clie
 func (h *Handlers) CreateWorkItem(
 	ctx context.Context, workItemType, title string, opts client.CreateOptions, project string,
 ) (*client.WorkItem, string, error) {
-	wi, err := h.ado.CreateWorkItem(ctx, h.project(project), workItemType, title, opts)
+	wi, err := h.client.CreateWorkItem(ctx, h.project(project), workItemType, title, opts)
 	if err != nil {
 		return nil, "", err
 	}
@@ -73,7 +73,7 @@ func (h *Handlers) CreateWorkItem(
 func (h *Handlers) UpdateWorkItem(
 	ctx context.Context, id int, opts client.UpdateOptions, project string,
 ) (*client.WorkItem, string, error) {
-	wi, err := h.ado.UpdateWorkItem(ctx, h.project(project), id, opts)
+	wi, err := h.client.UpdateWorkItem(ctx, h.project(project), id, opts)
 	if err != nil {
 		return nil, "", err
 	}
@@ -83,7 +83,7 @@ func (h *Handlers) UpdateWorkItem(
 
 // AddComment adds a comment to a work item and returns a confirmation message.
 func (h *Handlers) AddComment(ctx context.Context, id int, text, project string) (string, error) {
-	if err := h.ado.AddComment(ctx, h.project(project), id, text); err != nil {
+	if err := h.client.AddComment(ctx, h.project(project), id, text); err != nil {
 		return "", err
 	}
 

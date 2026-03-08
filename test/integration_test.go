@@ -29,7 +29,7 @@ func setupTestServer(t *testing.T) *testServerSetup {
 
 	ctx := context.Background()
 	mockWIT := &mockWITClient{}
-	adoClient := client.NewRealADOClientWithWIT(mockWIT)
+	adoClient := client.NewClientWithWIT(mockWIT)
 	h := tools.NewHandlers(adoClient, "TestProject")
 
 	// Create and configure server

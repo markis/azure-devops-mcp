@@ -106,13 +106,13 @@ type ADOClient interface {
 	AddComment(ctx context.Context, project string, id int, text string) error
 }
 
-// RealADOClient calls the Azure DevOps REST API using a PAT connection.
-type RealADOClient struct {
+// Client calls the Azure DevOps REST API using a PAT connection.
+type Client struct {
 	wit workitemtracking.Client
 }
 
-// NewRealADOClient creates a PAT-authenticated ADO client.
-func NewRealADOClient(ctx context.Context, orgURL, pat string) (*RealADOClient, error) {
+// NewClient creates a PAT-authenticated ADO client.
+func NewClient(ctx context.Context, orgURL, pat string) (*Client, error) {
 	conn := azuredevops.NewPatConnection(orgURL, pat)
 
 	wit, err := workitemtracking.NewClient(ctx, conn)
@@ -120,16 +120,16 @@ func NewRealADOClient(ctx context.Context, orgURL, pat string) (*RealADOClient, 
 		return nil, fmt.Errorf("creating work item tracking client: %w", err)
 	}
 
-	return &RealADOClient{wit: wit}, nil
+	return &Client{wit: wit}, nil
 }
 
-// NewRealADOClientWithWIT creates a client with an injected WIT client for testing.
-func NewRealADOClientWithWIT(wit workitemtracking.Client) *RealADOClient {
-	return &RealADOClient{wit: wit}
+// NewClientWithWIT creates a client with an injected WIT client for testing.
+func NewClientWithWIT(wit workitemtracking.Client) *Client {
+	return &Client{wit: wit}
 }
 
 // GetWorkItem fetches a single work item by ID.
-func (c *RealADOClient) GetWorkItem(ctx context.Context, project string, id int) (*WorkItem, error) {
+func (c *Client) GetWorkItem(ctx context.Context, project string, id int) (*WorkItem, error) {
 	fields := []string{
 		"System.Id", "System.Title", "System.State",
 		"System.WorkItemType", "System.AssignedTo",
@@ -156,7 +156,7 @@ func (c *RealADOClient) GetWorkItem(ctx context.Context, project string, id int)
 }
 
 // ListWorkItems runs a WIQL query and returns matching work items.
-func (c *RealADOClient) ListWorkItems(ctx context.Context, project, wiql string) ([]*WorkItemSummary, error) {
+func (c *Client) ListWorkItems(ctx context.Context, project, wiql string) ([]*WorkItemSummary, error) {
 	result, err := c.wit.QueryByWiql(ctx, workitemtracking.QueryByWiqlArgs{
 		Wiql:    &workitemtracking.Wiql{Query: &wiql},
 		Project: &project,
@@ -169,7 +169,7 @@ func (c *RealADOClient) ListWorkItems(ctx context.Context, project, wiql string)
 }
 
 // ListMyWorkItems returns active work items assigned to the authenticated user.
-func (c *RealADOClient) ListMyWorkItems(ctx context.Context, project string) ([]*WorkItemSummary, error) {
+func (c *Client) ListMyWorkItems(ctx context.Context, project string) ([]*WorkItemSummary, error) {
 	wiql := "SELECT [System.Id] FROM WorkItems WHERE [System.AssignedTo] = @Me " +
 		"AND [System.State] NOT IN ('Done','Closed','Resolved') " +
 		"ORDER BY [System.ChangedDate] DESC"
@@ -178,7 +178,7 @@ func (c *RealADOClient) ListMyWorkItems(ctx context.Context, project string) ([]
 }
 
 // CreateWorkItem creates a new work item of the given type.
-func (c *RealADOClient) CreateWorkItem(
+func (c *Client) CreateWorkItem(
 	ctx context.Context, project, workItemType, title string, opts CreateOptions,
 ) (*WorkItem, error) {
 	add := webapi.OperationValues.Add
@@ -232,7 +232,7 @@ func (c *RealADOClient) CreateWorkItem(
 
 // UpdateWorkItem patches fields on an existing work item.
 // Returns ErrNoFieldsToUpdate if no fields are provided.
-func (c *RealADOClient) UpdateWorkItem(
+func (c *Client) UpdateWorkItem(
 	ctx context.Context, project string, id int, opts UpdateOptions,
 ) (*WorkItem, error) {
 	ops := buildUpdateOps(opts)
@@ -253,7 +253,7 @@ func (c *RealADOClient) UpdateWorkItem(
 }
 
 // AddComment posts a comment on a work item.
-func (c *RealADOClient) AddComment(ctx context.Context, project string, id int, text string) error {
+func (c *Client) AddComment(ctx context.Context, project string, id int, text string) error {
 	_, err := c.wit.AddComment(ctx, workitemtracking.AddCommentArgs{
 		Request:    &workitemtracking.CommentCreate{Text: &text},
 		Project:    &project,
@@ -264,7 +264,7 @@ func (c *RealADOClient) AddComment(ctx context.Context, project string, id int, 
 }
 
 // fetchSummariesByRefs retrieves work item summaries (without large text fields) by batch.
-func (c *RealADOClient) fetchSummariesByRefs(
+func (c *Client) fetchSummariesByRefs(
 	ctx context.Context, project string, refs *[]workitemtracking.WorkItemReference,
 ) ([]*WorkItemSummary, error) {
 	if refs == nil || len(*refs) == 0 {

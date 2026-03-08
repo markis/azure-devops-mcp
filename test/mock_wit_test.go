@@ -10,7 +10,7 @@ import (
 )
 
 // mockWITClient implements workitemtracking.Client for testing.
-// Only implements methods used by RealADOClient.
+// Only implements methods used by Client.
 type mockWITClient struct {
 	GetWorkItemFn       func(context.Context, workitemtracking.GetWorkItemArgs) (*workitemtracking.WorkItem, error)
 	GetWorkItemsBatchFn func(context.Context, workitemtracking.GetWorkItemsBatchArgs) (*[]workitemtracking.WorkItem, error)

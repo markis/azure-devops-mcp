@@ -21,12 +21,12 @@ type Config struct {
 // Run creates the ADO client, registers all tools, and starts the MCP server
 // over stdio. It blocks until the client disconnects or ctx is cancelled.
 func Run(ctx context.Context, cfg Config) error {
-	ado, err := client.NewRealADOClient(ctx, cfg.OrgURL, cfg.PAT)
+	adoClient, err := client.NewClient(ctx, cfg.OrgURL, cfg.PAT)
 	if err != nil {
 		return fmt.Errorf("creating ADO client: %w", err)
 	}
 
-	h := tools.NewHandlers(ado, cfg.Project)
+	h := tools.NewHandlers(adoClient, cfg.Project)
 	srv := CreateServer()
 	RegisterTools(srv, h)
 

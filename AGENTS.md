@@ -120,7 +120,7 @@ import (
 - Test functions: `Test<Function>_<Scenario>` (underscores allowed)
 
 **Types**:
-- Exported structs: `PascalCase` (`WorkItem`, `RealADOClient`)
+- Exported structs: `PascalCase` (`WorkItem`, `Client`)
 - Options structs: `<Action>Options` (`CreateOptions`, `UpdateOptions`)
 - Input structs: `<tool>Input` (`getWorkItemInput`, `listWorkItemsInput`)
 
@@ -162,7 +162,7 @@ if len(ops) == 0 {
 
 **Propagate errors without wrapping when context is clear**:
 ```go
-if err := h.ado.AddComment(ctx, h.project(project), id, text); err != nil {
+if err := h.client.AddComment(ctx, h.project(project), id, text); err != nil {
     return "", err
 }
 ```
@@ -187,7 +187,7 @@ package client
 **Function/method comments**: Start with function name, complete sentences
 ```go
 // GetWorkItem fetches a single work item by ID.
-func (c *RealADOClient) GetWorkItem(...) (*WorkItem, error)
+func (c *Client) GetWorkItem(...) (*WorkItem, error)
 ```
 
 **Struct/type comments**: Explain purpose and key details
@@ -212,7 +212,7 @@ internal/
   controller/             # MCP server wiring, tool registration
   tools/                  # Business logic, tool handlers
   client/                 # Azure DevOps API abstraction
-    ado.go                # Real implementation
+    client.go             # Real implementation
     mock.go               # Mock for testing
 ```
 
@@ -224,12 +224,12 @@ internal/
 **Example**:
 ```go
 type Handlers struct {
-    ado            client.ADOClient  // Interface, not concrete
+    client         client.ADOClient  // Interface, not concrete
     defaultProject string
 }
 
-func NewHandlers(ado client.ADOClient, defaultProject string) *Handlers {
-    return &Handlers{ado: ado, defaultProject: defaultProject}
+func NewHandlers(client client.ADOClient, defaultProject string) *Handlers {
+    return &Handlers{client: client, defaultProject: defaultProject}
 }
 ```
 
@@ -263,8 +263,8 @@ type CreateOptions struct {
 
 **Constructor pattern (return pointers)**:
 ```go
-func NewHandlers(ado client.ADOClient, defaultProject string) *Handlers {
-    return &Handlers{ado: ado, defaultProject: defaultProject}
+func NewHandlers(client client.ADOClient, defaultProject string) *Handlers {
+    return &Handlers{client: client, defaultProject: defaultProject}
 }
 ```
 
