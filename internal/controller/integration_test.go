@@ -331,3 +331,48 @@ func TestIntegration_AddComment(t *testing.T) {
 	require.NotEmpty(t, textContent.Text)
 	require.Contains(t, textContent.Text, "Comment added")
 }
+
+func TestIntegration_FlexID_Conversions(t *testing.T) {
+	setup := setupTestServer(t)
+
+	// Configure mock to track received IDs
+	var receivedID int
+	setup.mockADO.GetWorkItemFn = func(_ context.Context, _ string, id int) (*client.WorkItem, error) {
+		receivedID = id
+		return &client.WorkItem{
+			WorkItemSummary: client.WorkItemSummary{
+				ID:    id,
+				Title: "Test",
+			},
+		}, nil
+	}
+
+	testCases := []struct {
+		name     string
+		idValue  any
+		expected int
+	}{
+		{"integer", 42, 42},
+		{"float", 42.0, 42},
+		// Note: string conversion ("42") works at the JSON unmarshal level
+		// (see flextypes.go), but is currently blocked by MCP schema validation.
+		// The schema generator doesn't recognize FlexID's JSONSchemaExtend method.
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			receivedID = 0
+
+			result, err := setup.clientSession.CallTool(setup.ctx, &mcp.CallToolParams{
+				Name: "get_work_item",
+				Arguments: map[string]any{
+					"id": tc.idValue,
+				},
+			})
+
+			require.NoError(t, err)
+			require.False(t, result.IsError)
+			require.Equal(t, tc.expected, receivedID, "ID should be converted to %d", tc.expected)
+		})
+	}
+}

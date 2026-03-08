@@ -66,7 +66,6 @@ func registerGetWorkItem(srv *mcp.Server, h *tools.Handlers) {
 	}, func(
 		ctx context.Context, _ *mcp.CallToolRequest, in getWorkItemInput,
 	) (*mcp.CallToolResult, *client.WorkItem, error) {
-		// Cache type conversions
 		id := int(in.ID)
 
 		if id <= 0 {
@@ -204,16 +203,12 @@ func registerCreateWorkItem(srv *mcp.Server, h *tools.Handlers) {
 			}, nil, nil
 		}
 
-		// Cache type conversions
-		storyPoints := float64(in.StoryPoints)
-		originalEstimate := float64(in.OriginalEstimate)
-
 		opts := client.CreateOptions{
 			Description:      in.Description,
 			AssignedTo:       in.AssignedTo,
 			Tags:             in.Tags,
-			StoryPoints:      storyPoints,
-			OriginalEstimate: originalEstimate,
+			StoryPoints:      float64(in.StoryPoints),
+			OriginalEstimate: float64(in.OriginalEstimate),
 			Size:             in.Size,
 		}
 
@@ -255,7 +250,6 @@ func registerUpdateWorkItem(srv *mcp.Server, h *tools.Handlers) {
 			"Provide the work item ID and any fields to update. " +
 			"At least one field must be provided. Returns the updated work item details.",
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, in updateWorkItemInput) (*mcp.CallToolResult, any, error) {
-		// Cache type conversions
 		id := int(in.ID)
 		storyPoints := float64(in.StoryPoints)
 		originalEstimate := float64(in.OriginalEstimate)
@@ -312,7 +306,6 @@ func registerAddComment(srv *mcp.Server, h *tools.Handlers) {
 		Description: "Add a comment to an Azure DevOps work item. " +
 			"Comments are visible in the work item's discussion section. Returns confirmation of the added comment.",
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, in addCommentInput) (*mcp.CallToolResult, any, error) {
-		// Cache type conversion
 		id := int(in.ID)
 
 		if id <= 0 {

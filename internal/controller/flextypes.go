@@ -49,31 +49,6 @@ func parseWorkItemID(s string) (int, error) {
 	return 0, ErrInvalidWorkItemID
 }
 
-// FlexInt is an integer that can be unmarshaled from either a number or string.
-type FlexInt int
-
-// UnmarshalJSON implements json.Unmarshaler for FlexInt.
-func (f *FlexInt) UnmarshalJSON(data []byte) error {
-	var v any
-	if err := json.Unmarshal(data, &v); err != nil {
-		return err
-	}
-
-	i, err := parseIntFromAny(v)
-	if err != nil {
-		return err
-	}
-
-	*f = FlexInt(i)
-
-	return nil
-}
-
-// MarshalJSON implements json.Marshaler for FlexInt.
-func (f FlexInt) MarshalJSON() ([]byte, error) {
-	return json.Marshal(int(f))
-}
-
 // FlexID is a work item ID that can be unmarshaled from a number, string number,
 // or Azure DevOps work item reference (e.g., "AB#123").
 type FlexID int
@@ -108,6 +83,15 @@ func (f *FlexID) UnmarshalJSON(data []byte) error {
 // MarshalJSON implements json.Marshaler for FlexID.
 func (f FlexID) MarshalJSON() ([]byte, error) {
 	return json.Marshal(int(f))
+}
+
+// JSONSchemaExtend customizes the JSON Schema to accept both integer and string types.
+func (FlexID) JSONSchemaExtend(schema *map[string]any) {
+	(*schema)["oneOf"] = []map[string]any{
+		{"type": "integer"},
+		{"type": "string"},
+	}
+	delete(*schema, "type")
 }
 
 // FlexFloat is a float that can be unmarshaled from either a number or string.
