@@ -147,3 +147,37 @@ func TestIntegration_GetWorkItem_NotFound(t *testing.T) {
 	// MCP framework uses the error parameter to populate content when err != nil
 	require.Contains(t, textContent.Text, "not found")
 }
+
+func TestIntegration_ListWorkItems(t *testing.T) {
+	setup := setupTestServer(t)
+
+	// Configure mock
+	setup.mockADO.ListWorkItemsFn = func(_ context.Context, project, query string) ([]*client.WorkItemSummary, error) {
+		require.Equal(t, "TestProject", project)
+		require.Contains(t, query, "SELECT")
+
+		return []*client.WorkItemSummary{
+			{ID: 1, Title: "Item 1", State: "Active", Type: "Bug"},
+			{ID: 2, Title: "Item 2", State: "Resolved", Type: "Task"},
+		}, nil
+	}
+
+	// Call tool
+	result, err := setup.clientSession.CallTool(setup.ctx, &mcp.CallToolParams{
+		Name: "list_work_items",
+		Arguments: map[string]any{
+			"query": "SELECT [System.Id] FROM WorkItems",
+		},
+	})
+
+	// Validate response
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+	require.Len(t, result.Content, 1)
+
+	textContent, ok := result.Content[0].(*mcp.TextContent)
+	require.True(t, ok)
+	require.NotEmpty(t, textContent.Text)
+	require.Contains(t, textContent.Text, "Item 1")
+	require.Contains(t, textContent.Text, "Item 2")
+}
