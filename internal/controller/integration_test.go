@@ -428,14 +428,13 @@ func TestIntegration_FlexID_Conversions(t *testing.T) {
 
 	// Configure mock to track received IDs
 	var receivedID int
-
-	setup.mockADO.GetWorkItemFn = func(_ context.Context, _ string, id int) (*client.WorkItem, error) {
-		receivedID = id
-
-		return &client.WorkItem{
-			WorkItemSummary: client.WorkItemSummary{
-				ID:    id,
-				Title: "Test",
+	setup.mockWIT.GetWorkItemFn = func(_ context.Context, args workitemtracking.GetWorkItemArgs) (*workitemtracking.WorkItem, error) {
+		receivedID = *args.Id
+		id := *args.Id
+		return &workitemtracking.WorkItem{
+			Id: &id,
+			Fields: &map[string]interface{}{
+				"System.Title": "Test",
 			},
 		}, nil
 	}
