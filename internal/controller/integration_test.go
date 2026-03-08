@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/workitemtracking"
+
 	"github.com/markis/azure-devops-mcp/internal/client"
 	"github.com/markis/azure-devops-mcp/internal/controller"
 	"github.com/markis/azure-devops-mcp/internal/tools"
@@ -68,19 +70,29 @@ func TestIntegration_GetWorkItem(t *testing.T) {
 	setup := setupTestServer(t)
 
 	// Configure mock
-	setup.mockADO.GetWorkItemFn = func(_ context.Context, project string, id int) (*client.WorkItem, error) {
-		require.Equal(t, "TestProject", project)
-		require.Equal(t, 42, id)
+	id := 42
+	title := "Test Bug"
+	state := "Active"
+	wiType := "Bug"
+	assignedTo := "test@example.com"
 
-		return &client.WorkItem{
-			WorkItemSummary: client.WorkItemSummary{
-				ID:         42,
-				Title:      "Test Bug",
-				State:      "Active",
-				Type:       "Bug",
-				AssignedTo: "test@example.com",
+	setup.mockWIT.GetWorkItemFn = func(_ context.Context, args workitemtracking.GetWorkItemArgs) (*workitemtracking.WorkItem, error) {
+		require.NotNil(t, args.Id)
+		require.NotNil(t, args.Project)
+		require.Equal(t, 42, *args.Id)
+		require.Equal(t, "TestProject", *args.Project)
+
+		return &workitemtracking.WorkItem{
+			Id: &id,
+			Fields: &map[string]interface{}{
+				"System.Title":        title,
+				"System.State":        state,
+				"System.WorkItemType": wiType,
+				"System.AssignedTo": map[string]interface{}{
+					"displayName": assignedTo,
+				},
+				"System.Description": "Test description",
 			},
-			Description: "Test description",
 		}, nil
 	}
 
