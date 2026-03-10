@@ -122,26 +122,6 @@ func TestFieldFloat_NilValue(t *testing.T) {
 	}
 }
 
-func TestExtractParentID_ValidParent(t *testing.T) {
-	fields := map[string]any{
-		"System.Parent": float64(789),
-	}
-
-	result := extractParentID(&fields)
-	if result != 789 {
-		t.Errorf("expected 789, got %d", result)
-	}
-}
-
-func TestExtractParentID_NoParent(t *testing.T) {
-	fields := map[string]any{}
-
-	result := extractParentID(&fields)
-	if result != 0 {
-		t.Errorf("expected 0 for missing parent, got %d", result)
-	}
-}
-
 func TestExtractAssignedTo_ValidIdentityRef(t *testing.T) {
 	fields := map[string]any{
 		"System.AssignedTo": map[string]any{
@@ -204,60 +184,6 @@ func TestConvertToMarkdown_SimpleHTML(t *testing.T) {
 
 	if len(result) < 5 {
 		t.Errorf("expected meaningful conversion, got %q", result)
-	}
-}
-
-func TestBuildUpdateOps_AllFields(t *testing.T) {
-	opts := UpdateOptions{
-		CommonFields: CommonFields{
-			AssignedTo:       "user@example.com",
-			Description:      "New description",
-			StoryPoints:      5.0,
-			OriginalEstimate: 8.0,
-			Size:             "L",
-		},
-		Title:              "Updated Title",
-		State:              "Active",
-		AcceptanceCriteria: "AC updated",
-	}
-
-	ops := buildUpdateOps(opts)
-
-	if len(ops) != 8 {
-		t.Fatalf("expected 8 operations, got %d", len(ops))
-	}
-
-	for i, op := range ops {
-		if op.Op == nil {
-			t.Errorf("operation %d has nil Op", i)
-			continue
-		}
-
-		if *op.Op != webapi.OperationValues.Replace {
-			t.Errorf("operation %d should use Replace, got %s", i, *op.Op)
-		}
-	}
-}
-
-func TestBuildUpdateOps_EmptyOptions(t *testing.T) {
-	opts := UpdateOptions{}
-	ops := buildUpdateOps(opts)
-
-	if len(ops) != 0 {
-		t.Fatalf("expected 0 operations for empty options, got %d", len(ops))
-	}
-}
-
-func TestBuildUpdateOps_PartialFields(t *testing.T) {
-	opts := UpdateOptions{
-		Title: "Only Title",
-		State: "Done",
-	}
-
-	ops := buildUpdateOps(opts)
-
-	if len(ops) != 2 {
-		t.Fatalf("expected 2 operations, got %d", len(ops))
 	}
 }
 

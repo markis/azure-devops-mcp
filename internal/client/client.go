@@ -196,20 +196,6 @@ func (c *Client) ListMyWorkItems(ctx context.Context, project string) ([]*WorkIt
 	return c.ListWorkItems(ctx, project, wiql)
 }
 
-// addStringField appends a string field operation if the value is non-empty.
-func addStringField(ops *[]webapi.JsonPatchOperation, op *webapi.Operation, path *string, value string) {
-	if value != "" {
-		*ops = append(*ops, webapi.JsonPatchOperation{Op: op, Path: path, Value: value})
-	}
-}
-
-// addFloatField appends a float field operation if the value is non-zero.
-func addFloatField(ops *[]webapi.JsonPatchOperation, op *webapi.Operation, path *string, value float64) {
-	if value != 0 {
-		*ops = append(*ops, webapi.JsonPatchOperation{Op: op, Path: path, Value: value})
-	}
-}
-
 // CreateWorkItem creates a new work item of the given type.
 func (c *Client) CreateWorkItem(
 	ctx context.Context, project, workItemType, title string, opts CreateOptions,
@@ -240,7 +226,17 @@ func (c *Client) CreateWorkItem(
 func (c *Client) UpdateWorkItem(
 	ctx context.Context, project string, id int, opts UpdateOptions,
 ) (*WorkItem, error) {
-	ops := buildUpdateOps(opts)
+	replace := webapi.OperationValues.Replace
+
+	var ops []webapi.JsonPatchOperation
+
+	addStringField(&ops, &replace, &fieldPathTitle, opts.Title)
+	addStringField(&ops, &replace, &fieldPathState, opts.State)
+	addStringField(&ops, &replace, &fieldPathAcceptanceCriteria, opts.AcceptanceCriteria)
+	addStringField(&ops, &replace, &fieldPathReason, opts.Reason)
+
+	buildCommonOps(&ops, &replace, opts.CommonFields)
+
 	if len(ops) == 0 {
 		return nil, ErrNoFieldsToUpdate
 	}
@@ -266,6 +262,20 @@ func (c *Client) AddComment(ctx context.Context, project string, id int, text st
 	})
 
 	return err
+}
+
+// addStringField appends a string field operation if the value is non-empty.
+func addStringField(ops *[]webapi.JsonPatchOperation, op *webapi.Operation, path *string, value string) {
+	if value != "" {
+		*ops = append(*ops, webapi.JsonPatchOperation{Op: op, Path: path, Value: value})
+	}
+}
+
+// addFloatField appends a float field operation if the value is non-zero.
+func addFloatField(ops *[]webapi.JsonPatchOperation, op *webapi.Operation, path *string, value float64) {
+	if value != 0 {
+		*ops = append(*ops, webapi.JsonPatchOperation{Op: op, Path: path, Value: value})
+	}
 }
 
 // fetchSummariesByRefs retrieves work item summaries (without large text fields) by batch.
@@ -327,7 +337,7 @@ func toWorkItem(item *workitemtracking.WorkItem) *WorkItem {
 			IterationPath: fieldString(f, "System.IterationPath"),
 			Priority:      fieldInt(f, "Microsoft.VSTS.Common.Priority"),
 			StoryPoints:   fieldFloat(f, "Microsoft.VSTS.Scheduling.StoryPoints"),
-			ParentID:      extractParentID(f),
+			ParentID:      fieldInt(f, "System.Parent"),
 			AssignedTo:    extractAssignedTo(f),
 		},
 		Description:        convertToMarkdown(fieldString(f, "System.Description")),
@@ -369,7 +379,7 @@ func toWorkItemSummary(item *workitemtracking.WorkItem) *WorkItemSummary {
 		IterationPath: fieldString(f, "System.IterationPath"),
 		Priority:      fieldInt(f, "Microsoft.VSTS.Common.Priority"),
 		StoryPoints:   fieldFloat(f, "Microsoft.VSTS.Scheduling.StoryPoints"),
-		ParentID:      extractParentID(f),
+		ParentID:      fieldInt(f, "System.Parent"),
 		AssignedTo:    extractAssignedTo(f),
 	}
 	if item.Id != nil {
@@ -406,35 +416,6 @@ func fieldInt(f *map[string]any, key string) int {
 	}
 }
 
-// buildCommonOps adds patch operations for CommonFields.
-func buildCommonOps(ops *[]webapi.JsonPatchOperation, operation *webapi.Operation, fields CommonFields) {
-	addStringField(ops, operation, &fieldPathAssignedTo, fields.AssignedTo)
-	addStringField(ops, operation, &fieldPathDescription, fields.Description)
-	addStringField(ops, operation, &fieldPathSize, fields.Size)
-	addStringField(ops, operation, &fieldPathSeverity, fields.Severity)
-
-	addFloatField(ops, operation, &fieldPathStoryPoints, fields.StoryPoints)
-	addFloatField(ops, operation, &fieldPathOriginalEstimate, fields.OriginalEstimate)
-	addFloatField(ops, operation, &fieldPathCompletedWork, fields.CompletedWork)
-	addFloatField(ops, operation, &fieldPathRemainingWork, fields.RemainingWork)
-}
-
-// buildUpdateOps converts UpdateOptions into a JSON patch operation slice.
-func buildUpdateOps(opts UpdateOptions) []webapi.JsonPatchOperation {
-	replace := webapi.OperationValues.Replace
-
-	var ops []webapi.JsonPatchOperation
-
-	addStringField(&ops, &replace, &fieldPathTitle, opts.Title)
-	addStringField(&ops, &replace, &fieldPathState, opts.State)
-	addStringField(&ops, &replace, &fieldPathAcceptanceCriteria, opts.AcceptanceCriteria)
-	addStringField(&ops, &replace, &fieldPathReason, opts.Reason)
-
-	buildCommonOps(&ops, &replace, opts.CommonFields)
-
-	return ops
-}
-
 // fieldFloat extracts a float64 value from the ADO fields map.
 func fieldFloat(f *map[string]any, key string) float64 {
 	v, ok := (*f)[key]
@@ -447,10 +428,17 @@ func fieldFloat(f *map[string]any, key string) float64 {
 	return n
 }
 
-// extractParentID pulls the numeric ID from the System.Parent relation field.
-// ADO returns this as a float64 (the parent work item ID).
-func extractParentID(f *map[string]any) int {
-	return fieldInt(f, "System.Parent")
+// buildCommonOps adds patch operations for CommonFields.
+func buildCommonOps(ops *[]webapi.JsonPatchOperation, operation *webapi.Operation, fields CommonFields) {
+	addStringField(ops, operation, &fieldPathAssignedTo, fields.AssignedTo)
+	addStringField(ops, operation, &fieldPathDescription, fields.Description)
+	addStringField(ops, operation, &fieldPathSize, fields.Size)
+	addStringField(ops, operation, &fieldPathSeverity, fields.Severity)
+
+	addFloatField(ops, operation, &fieldPathStoryPoints, fields.StoryPoints)
+	addFloatField(ops, operation, &fieldPathOriginalEstimate, fields.OriginalEstimate)
+	addFloatField(ops, operation, &fieldPathCompletedWork, fields.CompletedWork)
+	addFloatField(ops, operation, &fieldPathRemainingWork, fields.RemainingWork)
 }
 
 // extractAssignedTo pulls the display name from the IdentityRef object
