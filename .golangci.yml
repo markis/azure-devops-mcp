@@ -16,6 +16,7 @@ linters:
   disable:
     - depguard # requires an explicit allow-list to be useful; not configured for this project
     - exhaustruct # impractical for SDK struct literals (optional fields would all need setting)
+    - funlen # table-driven tests naturally exceed limits
     - gochecknoglobals # htmlToMD converter is intentionally package-level
     - nlreturn # stylistic preference we don't share
     - noinlineerr # too pedantic for this codebase

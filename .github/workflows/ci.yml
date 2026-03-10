@@ -33,13 +33,10 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.26"
+          go-version-file: "go.mod"
 
       - name: Run tests
-        run: go test ./... -v -race -coverprofile=coverage.out -coverpkg=./...
-
-      - name: Coverage report
-        run: go tool cover -func=coverage.out
+        run: make test-ci
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
