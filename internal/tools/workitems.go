@@ -115,6 +115,14 @@ func formatWorkItem(wi *client.WorkItem) string {
 		fmt.Fprintf(&b, " | Story Points: %.0f", wi.StoryPoints)
 	}
 
+	if wi.Severity != "" {
+		fmt.Fprintf(&b, " | Severity: %s", wi.Severity)
+	}
+
+	if wi.Reason != "" {
+		fmt.Fprintf(&b, " | Reason: %s", wi.Reason)
+	}
+
 	b.WriteString("\n")
 
 	if wi.Description != "" {
@@ -127,6 +135,11 @@ func formatWorkItem(wi *client.WorkItem) string {
 
 	if wi.Tags != "" {
 		fmt.Fprintf(&b, "\nTags: %s\n", wi.Tags)
+	}
+
+	if wi.CompletedWork > 0 || wi.RemainingWork > 0 {
+		fmt.Fprintf(&b, "\nTime Tracking: Completed: %.1fh, Remaining: %.1fh\n",
+			wi.CompletedWork, wi.RemainingWork)
 	}
 
 	return b.String()

@@ -24,7 +24,8 @@ var htmlToMD = md.NewConverter("", true, mdOpts)
 // ErrNoFieldsToUpdate is returned when UpdateWorkItem is called with no fields set.
 var ErrNoFieldsToUpdate = errors.New(
 	"no fields to update: provide at least one of title, state, assigned_to, " +
-		"description, acceptance_criteria, story_points, original_estimate, or size",
+		"description, acceptance_criteria, story_points, original_estimate, " +
+		"completed_work, remaining_work, size, severity, or reason",
 )
 
 // Field path constants for Azure DevOps work item fields.
@@ -39,6 +40,10 @@ var (
 	fieldPathStoryPoints        = "/fields/Microsoft.VSTS.Scheduling.StoryPoints"
 	fieldPathOriginalEstimate   = "/fields/Microsoft.VSTS.Scheduling.OriginalEstimate"
 	fieldPathSize               = "/fields/Custom.Teeshirtsizing"
+	fieldPathSeverity           = "/fields/Microsoft.VSTS.Common.Severity"
+	fieldPathCompletedWork      = "/fields/Microsoft.VSTS.Scheduling.CompletedWork"
+	fieldPathRemainingWork      = "/fields/Microsoft.VSTS.Scheduling.RemainingWork"
+	fieldPathReason             = "/fields/System.Reason"
 )
 
 // WorkItemSummary is a lightweight representation for list operations.
@@ -67,31 +72,42 @@ type WorkItem struct {
 	AcceptanceCriteria string  `json:"acceptance_criteria,omitempty" jsonschema:"Acceptance criteria"`
 	ReproSteps         string  `json:"repro_steps,omitempty"         jsonschema:"Reproduction steps"`
 	OriginalEstimate   float64 `json:"original_estimate,omitempty"   jsonschema:"Time estimate in hours"`
+	CompletedWork      float64 `json:"completed_work,omitempty"      jsonschema:"Completed work in hours"`
+	RemainingWork      float64 `json:"remaining_work,omitempty"      jsonschema:"Remaining work in hours"`
 	Size               string  `json:"size,omitempty"                jsonschema:"T-shirt size estimate"`
+	Severity           string  `json:"severity,omitempty"            jsonschema:"Severity (Critical/High/Medium/Low)"`
+	Reason             string  `json:"reason,omitempty"              jsonschema:"Reason for current state"`
 	URL                string  `json:"url"                           jsonschema:"Work item URL"`
+}
+
+// CommonFields holds fields shared between CreateOptions and UpdateOptions.
+type CommonFields struct {
+	AssignedTo       string
+	Description      string
+	StoryPoints      float64
+	OriginalEstimate float64
+	CompletedWork    float64
+	RemainingWork    float64
+	Size             string
+	Severity         string
 }
 
 // CreateOptions holds optional fields for creating a work item.
 type CreateOptions struct {
-	Description      string
-	AssignedTo       string
-	Tags             string
-	StoryPoints      float64
-	OriginalEstimate float64
-	Size             string
+	CommonFields
+
+	Tags string
 }
 
 // UpdateOptions holds fields that can be patched on a work item.
 // Only non-zero/non-empty values are applied.
 type UpdateOptions struct {
+	CommonFields
+
 	Title              string
 	State              string
-	AssignedTo         string
-	Description        string
 	AcceptanceCriteria string
-	StoryPoints        float64
-	OriginalEstimate   float64
-	Size               string
+	Reason             string
 }
 
 // ADOClient is the interface tool handlers depend on.
@@ -133,13 +149,16 @@ func (c *Client) GetWorkItem(ctx context.Context, project string, id int) (*Work
 	fields := []string{
 		"System.Id", "System.Title", "System.State",
 		"System.WorkItemType", "System.AssignedTo",
-		"System.Description", "System.Tags",
+		"System.Description", "System.Tags", "System.Reason",
 		"System.AreaPath", "System.IterationPath", "System.Parent",
 		"Microsoft.VSTS.Common.AcceptanceCriteria",
 		"Microsoft.VSTS.Common.Priority",
+		"Microsoft.VSTS.Common.Severity",
 		"Custom.Teeshirtsizing",
 		"Microsoft.VSTS.Scheduling.StoryPoints",
 		"Microsoft.VSTS.Scheduling.OriginalEstimate",
+		"Microsoft.VSTS.Scheduling.CompletedWork",
+		"Microsoft.VSTS.Scheduling.RemainingWork",
 		"Microsoft.VSTS.TCM.ReproSteps",
 	}
 
@@ -177,6 +196,20 @@ func (c *Client) ListMyWorkItems(ctx context.Context, project string) ([]*WorkIt
 	return c.ListWorkItems(ctx, project, wiql)
 }
 
+// addStringField appends a string field operation if the value is non-empty.
+func addStringField(ops *[]webapi.JsonPatchOperation, op *webapi.Operation, path *string, value string) {
+	if value != "" {
+		*ops = append(*ops, webapi.JsonPatchOperation{Op: op, Path: path, Value: value})
+	}
+}
+
+// addFloatField appends a float field operation if the value is non-zero.
+func addFloatField(ops *[]webapi.JsonPatchOperation, op *webapi.Operation, path *string, value float64) {
+	if value != 0 {
+		*ops = append(*ops, webapi.JsonPatchOperation{Op: op, Path: path, Value: value})
+	}
+}
+
 // CreateWorkItem creates a new work item of the given type.
 func (c *Client) CreateWorkItem(
 	ctx context.Context, project, workItemType, title string, opts CreateOptions,
@@ -186,37 +219,9 @@ func (c *Client) CreateWorkItem(
 	ops := []webapi.JsonPatchOperation{
 		{Op: &add, Path: &fieldPathTitle, Value: title},
 	}
-	if opts.Description != "" {
-		ops = append(ops, webapi.JsonPatchOperation{
-			Op: &add, Path: &fieldPathDescription, Value: opts.Description,
-		})
-	}
 
-	if opts.AssignedTo != "" {
-		ops = append(ops, webapi.JsonPatchOperation{Op: &add, Path: &fieldPathAssignedTo, Value: opts.AssignedTo})
-	}
-
-	if opts.Tags != "" {
-		ops = append(ops, webapi.JsonPatchOperation{Op: &add, Path: &fieldPathTags, Value: opts.Tags})
-	}
-
-	if opts.StoryPoints != 0 {
-		ops = append(ops, webapi.JsonPatchOperation{
-			Op: &add, Path: &fieldPathStoryPoints, Value: opts.StoryPoints,
-		})
-	}
-
-	if opts.OriginalEstimate != 0 {
-		ops = append(ops, webapi.JsonPatchOperation{
-			Op:    &add,
-			Path:  &fieldPathOriginalEstimate,
-			Value: opts.OriginalEstimate,
-		})
-	}
-
-	if opts.Size != "" {
-		ops = append(ops, webapi.JsonPatchOperation{Op: &add, Path: &fieldPathSize, Value: opts.Size})
-	}
+	addStringField(&ops, &add, &fieldPathTags, opts.Tags)
+	buildCommonOps(&ops, &add, opts.CommonFields)
 
 	item, err := c.wit.CreateWorkItem(ctx, workitemtracking.CreateWorkItemArgs{
 		Document: &ops,
@@ -329,7 +334,11 @@ func toWorkItem(item *workitemtracking.WorkItem) *WorkItem {
 		AcceptanceCriteria: convertToMarkdown(fieldString(f, "Microsoft.VSTS.Common.AcceptanceCriteria")),
 		ReproSteps:         convertToMarkdown(fieldString(f, "Microsoft.VSTS.TCM.ReproSteps")),
 		OriginalEstimate:   fieldFloat(f, "Microsoft.VSTS.Scheduling.OriginalEstimate"),
+		CompletedWork:      fieldFloat(f, "Microsoft.VSTS.Scheduling.CompletedWork"),
+		RemainingWork:      fieldFloat(f, "Microsoft.VSTS.Scheduling.RemainingWork"),
 		Size:               fieldString(f, "Custom.Teeshirtsizing"),
+		Severity:           fieldString(f, "Microsoft.VSTS.Common.Severity"),
+		Reason:             fieldString(f, "System.Reason"),
 	}
 	if item.Id != nil {
 		wi.ID = *item.Id
@@ -397,60 +406,31 @@ func fieldInt(f *map[string]any, key string) int {
 	}
 }
 
+// buildCommonOps adds patch operations for CommonFields.
+func buildCommonOps(ops *[]webapi.JsonPatchOperation, operation *webapi.Operation, fields CommonFields) {
+	addStringField(ops, operation, &fieldPathAssignedTo, fields.AssignedTo)
+	addStringField(ops, operation, &fieldPathDescription, fields.Description)
+	addStringField(ops, operation, &fieldPathSize, fields.Size)
+	addStringField(ops, operation, &fieldPathSeverity, fields.Severity)
+
+	addFloatField(ops, operation, &fieldPathStoryPoints, fields.StoryPoints)
+	addFloatField(ops, operation, &fieldPathOriginalEstimate, fields.OriginalEstimate)
+	addFloatField(ops, operation, &fieldPathCompletedWork, fields.CompletedWork)
+	addFloatField(ops, operation, &fieldPathRemainingWork, fields.RemainingWork)
+}
+
 // buildUpdateOps converts UpdateOptions into a JSON patch operation slice.
 func buildUpdateOps(opts UpdateOptions) []webapi.JsonPatchOperation {
 	replace := webapi.OperationValues.Replace
 
 	var ops []webapi.JsonPatchOperation
-	if opts.Title != "" {
-		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: &fieldPathTitle, Value: opts.Title})
-	}
 
-	if opts.State != "" {
-		ops = append(ops, webapi.JsonPatchOperation{Op: &replace, Path: &fieldPathState, Value: opts.State})
-	}
+	addStringField(&ops, &replace, &fieldPathTitle, opts.Title)
+	addStringField(&ops, &replace, &fieldPathState, opts.State)
+	addStringField(&ops, &replace, &fieldPathAcceptanceCriteria, opts.AcceptanceCriteria)
+	addStringField(&ops, &replace, &fieldPathReason, opts.Reason)
 
-	if opts.AssignedTo != "" {
-		ops = append(ops, webapi.JsonPatchOperation{
-			Op: &replace, Path: &fieldPathAssignedTo, Value: opts.AssignedTo,
-		})
-	}
-
-	if opts.Description != "" {
-		ops = append(ops, webapi.JsonPatchOperation{
-			Op: &replace, Path: &fieldPathDescription, Value: opts.Description,
-		})
-	}
-
-	if opts.AcceptanceCriteria != "" {
-		ops = append(ops, webapi.JsonPatchOperation{
-			Op:    &replace,
-			Path:  &fieldPathAcceptanceCriteria,
-			Value: opts.AcceptanceCriteria,
-		})
-	}
-
-	if opts.StoryPoints != 0 {
-		ops = append(ops, webapi.JsonPatchOperation{
-			Op:    &replace,
-			Path:  &fieldPathStoryPoints,
-			Value: opts.StoryPoints,
-		})
-	}
-
-	if opts.OriginalEstimate != 0 {
-		ops = append(ops, webapi.JsonPatchOperation{
-			Op:    &replace,
-			Path:  &fieldPathOriginalEstimate,
-			Value: opts.OriginalEstimate,
-		})
-	}
-
-	if opts.Size != "" {
-		ops = append(ops, webapi.JsonPatchOperation{
-			Op: &replace, Path: &fieldPathSize, Value: opts.Size,
-		})
-	}
+	buildCommonOps(&ops, &replace, opts.CommonFields)
 
 	return ops
 }

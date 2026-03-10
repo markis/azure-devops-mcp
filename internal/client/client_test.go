@@ -39,12 +39,14 @@ func TestWorkItem_JSONMarshaling(t *testing.T) {
 
 func TestCreateOptions_AllFields(t *testing.T) {
 	opts := client.CreateOptions{
-		Description:      "Description",
-		AssignedTo:       "user@example.com",
-		Tags:             "tag1;tag2",
-		StoryPoints:      3.0,
-		OriginalEstimate: 5.0,
-		Size:             "S",
+		CommonFields: client.CommonFields{
+			AssignedTo:       "user@example.com",
+			Description:      "Description",
+			StoryPoints:      3.0,
+			OriginalEstimate: 5.0,
+			Size:             "S",
+		},
+		Tags: "tag1;tag2",
 	}
 
 	if opts.Description != "Description" {
@@ -58,14 +60,16 @@ func TestCreateOptions_AllFields(t *testing.T) {
 
 func TestUpdateOptions_AllFields(t *testing.T) {
 	opts := client.UpdateOptions{
+		CommonFields: client.CommonFields{
+			AssignedTo:       "user@example.com",
+			Description:      "Description",
+			StoryPoints:      5.0,
+			OriginalEstimate: 8.0,
+			Size:             "L",
+		},
 		Title:              "Title",
 		State:              "Active",
-		AssignedTo:         "user@example.com",
-		Description:        "Description",
 		AcceptanceCriteria: "AC",
-		StoryPoints:        5.0,
-		OriginalEstimate:   8.0,
-		Size:               "L",
 	}
 
 	if opts.Title != "Title" {

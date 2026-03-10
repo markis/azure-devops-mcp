@@ -181,7 +181,10 @@ type createWorkItemInput struct {
 	Tags             string    `json:"tags,omitempty"              jsonschema:"semicolon-separated tags"`
 	StoryPoints      FlexFloat `json:"story_points,omitempty"      jsonschema:"story points estimate (for User Stories)"`
 	OriginalEstimate FlexFloat `json:"original_estimate,omitempty" jsonschema:"time estimate in hours (for Tasks)"`
+	CompletedWork    FlexFloat `json:"completed_work,omitempty"    jsonschema:"completed work in hours (for Tasks)"`
+	RemainingWork    FlexFloat `json:"remaining_work,omitempty"    jsonschema:"remaining work in hours (for Tasks)"`
 	Size             string    `json:"size,omitempty"              jsonschema:"t-shirt size (S, M, L, XL)"`
+	Severity         string    `json:"severity,omitempty"          jsonschema:"severity for Bug/Vulnerability"`
 	Project          string    `json:"project,omitempty"           jsonschema:"project name (optional)"`
 }
 
@@ -205,12 +208,17 @@ func registerCreateWorkItem(srv *mcp.Server, h *tools.Handlers) {
 		}
 
 		opts := client.CreateOptions{
-			Description:      in.Description,
-			AssignedTo:       in.AssignedTo,
-			Tags:             in.Tags,
-			StoryPoints:      float64(in.StoryPoints),
-			OriginalEstimate: float64(in.OriginalEstimate),
-			Size:             in.Size,
+			CommonFields: client.CommonFields{
+				AssignedTo:       in.AssignedTo,
+				Description:      in.Description,
+				StoryPoints:      float64(in.StoryPoints),
+				OriginalEstimate: float64(in.OriginalEstimate),
+				CompletedWork:    float64(in.CompletedWork),
+				RemainingWork:    float64(in.RemainingWork),
+				Size:             in.Size,
+				Severity:         in.Severity,
+			},
+			Tags: in.Tags,
 		}
 
 		workItem, text, err := h.CreateWorkItem(ctx, in.Type, in.Title, opts, in.Project)
@@ -239,7 +247,11 @@ type updateWorkItemInput struct {
 	AcceptanceCriteria string    `json:"acceptance_criteria,omitempty" jsonschema:"acceptance criteria for work item"`
 	StoryPoints        FlexFloat `json:"story_points,omitempty"        jsonschema:"story points estimate"`
 	OriginalEstimate   FlexFloat `json:"original_estimate,omitempty"   jsonschema:"time estimate in hours"`
+	CompletedWork      FlexFloat `json:"completed_work,omitempty"      jsonschema:"new completed work in hours"`
+	RemainingWork      FlexFloat `json:"remaining_work,omitempty"      jsonschema:"new remaining work in hours"`
 	Size               string    `json:"size,omitempty"                jsonschema:"t-shirt size (S, M, L, XL)"`
+	Severity           string    `json:"severity,omitempty"            jsonschema:"new severity level"`
+	Reason             string    `json:"reason,omitempty"              jsonschema:"reason for state change"`
 	Project            string    `json:"project,omitempty"             jsonschema:"project name (optional)"`
 }
 
@@ -265,14 +277,20 @@ func registerUpdateWorkItem(srv *mcp.Server, h *tools.Handlers) {
 		}
 
 		opts := client.UpdateOptions{
+			CommonFields: client.CommonFields{
+				AssignedTo:       in.AssignedTo,
+				Description:      in.Description,
+				StoryPoints:      storyPoints,
+				OriginalEstimate: originalEstimate,
+				CompletedWork:    float64(in.CompletedWork),
+				RemainingWork:    float64(in.RemainingWork),
+				Size:             in.Size,
+				Severity:         in.Severity,
+			},
 			Title:              in.Title,
 			State:              in.State,
-			AssignedTo:         in.AssignedTo,
-			Description:        in.Description,
 			AcceptanceCriteria: in.AcceptanceCriteria,
-			StoryPoints:        storyPoints,
-			OriginalEstimate:   originalEstimate,
-			Size:               in.Size,
+			Reason:             in.Reason,
 		}
 
 		workItem, text, err := h.UpdateWorkItem(ctx, id, opts, in.Project)
