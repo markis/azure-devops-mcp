@@ -209,14 +209,16 @@ func TestConvertToMarkdown_SimpleHTML(t *testing.T) {
 
 func TestBuildUpdateOps_AllFields(t *testing.T) {
 	opts := UpdateOptions{
+		CommonFields: CommonFields{
+			AssignedTo:       "user@example.com",
+			Description:      "New description",
+			StoryPoints:      5.0,
+			OriginalEstimate: 8.0,
+			Size:             "L",
+		},
 		Title:              "Updated Title",
 		State:              "Active",
-		AssignedTo:         "user@example.com",
-		Description:        "New description",
 		AcceptanceCriteria: "AC updated",
-		StoryPoints:        5.0,
-		OriginalEstimate:   8.0,
-		Size:               "L",
 	}
 
 	ops := buildUpdateOps(opts)
@@ -340,5 +342,136 @@ func TestToWorkItem_AllFields(t *testing.T) {
 
 	if wi.Size != "M" {
 		t.Errorf("expected Size 'M', got %q", wi.Size)
+	}
+}
+
+const (
+	testPathTitle       = "/fields/System.Title"
+	testPathStoryPoints = "/fields/Microsoft.VSTS.Scheduling.StoryPoints"
+)
+
+func TestAddStringField_WithValue(t *testing.T) {
+	add := webapi.OperationValues.Add
+	path := testPathTitle
+
+	var ops []webapi.JsonPatchOperation
+
+	addStringField(&ops, &add, &path, "Test Value")
+
+	if len(ops) != 1 {
+		t.Fatalf("expected 1 operation, got %d", len(ops))
+	}
+
+	if *ops[0].Op != add {
+		t.Errorf("expected Add operation, got %v", *ops[0].Op)
+	}
+
+	if *ops[0].Path != path {
+		t.Errorf("expected path %s, got %s", path, *ops[0].Path)
+	}
+
+	if ops[0].Value != "Test Value" {
+		t.Errorf("expected value 'Test Value', got %v", ops[0].Value)
+	}
+}
+
+func TestAddStringField_EmptyValue(t *testing.T) {
+	add := webapi.OperationValues.Add
+	path := testPathTitle
+
+	var ops []webapi.JsonPatchOperation
+
+	addStringField(&ops, &add, &path, "")
+
+	if len(ops) != 0 {
+		t.Errorf("expected 0 operations for empty string, got %d", len(ops))
+	}
+}
+
+func TestAddFloatField_WithNonZeroValue(t *testing.T) {
+	add := webapi.OperationValues.Add
+	path := testPathStoryPoints
+
+	var ops []webapi.JsonPatchOperation
+
+	addFloatField(&ops, &add, &path, 5.5)
+
+	if len(ops) != 1 {
+		t.Fatalf("expected 1 operation, got %d", len(ops))
+	}
+
+	if *ops[0].Op != add {
+		t.Errorf("expected Add operation, got %v", *ops[0].Op)
+	}
+
+	if *ops[0].Path != path {
+		t.Errorf("expected path %s, got %s", path, *ops[0].Path)
+	}
+
+	if ops[0].Value != 5.5 {
+		t.Errorf("expected value 5.5, got %v", ops[0].Value)
+	}
+}
+
+func TestAddFloatField_ZeroValue(t *testing.T) {
+	add := webapi.OperationValues.Add
+	path := testPathStoryPoints
+
+	var ops []webapi.JsonPatchOperation
+
+	addFloatField(&ops, &add, &path, 0)
+
+	if len(ops) != 0 {
+		t.Errorf("expected 0 operations for zero value, got %d", len(ops))
+	}
+}
+
+func TestAddStringField_MultipleFields(t *testing.T) {
+	add := webapi.OperationValues.Add
+	pathTitle := testPathTitle
+	pathDesc := "/fields/System.Description"
+	pathTags := "/fields/System.Tags"
+
+	var ops []webapi.JsonPatchOperation
+
+	addStringField(&ops, &add, &pathTitle, "Title")
+	addStringField(&ops, &add, &pathDesc, "")
+	addStringField(&ops, &add, &pathTags, "tag1;tag2")
+
+	if len(ops) != 2 {
+		t.Fatalf("expected 2 operations (empty desc skipped), got %d", len(ops))
+	}
+
+	if ops[0].Value != "Title" {
+		t.Errorf("expected first value 'Title', got %v", ops[0].Value)
+	}
+
+	if ops[1].Value != "tag1;tag2" {
+		t.Errorf("expected second value 'tag1;tag2', got %v", ops[1].Value)
+	}
+}
+
+func TestAddFloatField_MultipleFields(t *testing.T) {
+	replace := webapi.OperationValues.Replace
+	pathStory := testPathStoryPoints
+	pathEst := "/fields/Microsoft.VSTS.Scheduling.OriginalEstimate"
+	pathComp := "/fields/Microsoft.VSTS.Scheduling.CompletedWork"
+
+	var ops []webapi.JsonPatchOperation
+
+	addFloatField(&ops, &replace, &pathStory, 3.0)
+	addFloatField(&ops, &replace, &pathEst, 0)
+	addFloatField(&ops, &replace, &pathComp, 1.5)
+
+	if len(ops) != 2 {
+		t.Fatalf("expected 2 operations (zero estimate skipped), got %d", len(ops))
+	}
+
+	if ops[0].Value != 3.0 {
+		t.Errorf("expected first value 3.0, got %v", ops[0].Value)
+	}
+
+	if ops[1].Value != 1.5 {
+		t.Errorf("expected second value 1.5, got %v", ops[1].Value)
 	}
 }

@@ -279,124 +279,185 @@ func TestIntegration_ListMyWorkItems(t *testing.T) {
 }
 
 func TestIntegration_CreateWorkItem(t *testing.T) {
-	setup := setupTestServer(t)
-
-	// Configure mock
-	setup.mockWIT.CreateWorkItemFn = func(_ context.Context, args workitemtracking.CreateWorkItemArgs) (*workitemtracking.WorkItem, error) {
-		require.NotNil(t, args.Project)
-		require.NotNil(t, args.Type)
-		require.Equal(t, "TestProject", *args.Project)
-		require.Equal(t, "Bug", *args.Type)
-
-		// Extract title from document
-		var title string
-
-		if args.Document != nil {
-			for _, op := range *args.Document {
-				if op.Path != nil && *op.Path == "/fields/System.Title" {
-					title = op.Value.(string) //nolint:forcetypeassert // Test mock data
-					break
-				}
-			}
-		}
-
-		require.Equal(t, "New Bug", title)
-
-		id := 100
-
-		return &workitemtracking.WorkItem{
-			Id: &id,
-			Fields: &map[string]any{
-				"System.Title":        title,
-				"System.WorkItemType": *args.Type,
+	testCases := []struct {
+		name     string
+		wiType   string
+		title    string
+		args     map[string]any
+		fields   map[string]any
+		contains []string
+	}{
+		{
+			name:   "basic bug",
+			wiType: "Bug",
+			title:  "New Bug",
+			args: map[string]any{
+				"type":        "Bug",
+				"title":       "New Bug",
+				"description": "Bug description",
+			},
+			fields: map[string]any{
+				"System.Title":        "New Bug",
+				"System.WorkItemType": "Bug",
 				"System.State":        "New",
 				"System.Description":  "Bug description",
 			},
-		}, nil
+			contains: []string{"Created work item #100", "New Bug", "Bug", "New"},
+		},
+		{
+			name:   "vulnerability with severity",
+			wiType: "Vulnerability",
+			title:  "Security Issue",
+			args: map[string]any{
+				"type":     "Vulnerability",
+				"title":    "Security Issue",
+				"severity": "High",
+			},
+			fields: map[string]any{
+				"System.Title":                   "Security Issue",
+				"System.WorkItemType":            "Vulnerability",
+				"System.State":                   "New",
+				"Microsoft.VSTS.Common.Severity": "High",
+			},
+			contains: []string{"Security Issue", "Vulnerability", "New"},
+		},
+		{
+			name:   "task with time tracking",
+			wiType: "Task",
+			title:  "Development Task",
+			args: map[string]any{
+				"type":           "Task",
+				"title":          "Development Task",
+				"completed_work": 5.0,
+				"remaining_work": 3.0,
+			},
+			fields: map[string]any{
+				"System.Title":        "Development Task",
+				"System.WorkItemType": "Task",
+				"System.State":        "Active",
+				"Microsoft.VSTS.Scheduling.CompletedWork": 5.0,
+				"Microsoft.VSTS.Scheduling.RemainingWork": 3.0,
+			},
+			contains: []string{"Development Task", "Task", "Active"},
+		},
 	}
 
-	// Call tool
-	result, err := setup.clientSession.CallTool(setup.ctx, &mcp.CallToolParams{
-		Name: "create_work_item",
-		Arguments: map[string]any{
-			"type":        "Bug",
-			"title":       "New Bug",
-			"description": "Bug description",
-		},
-	})
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			setup := setupTestServer(t)
 
-	// Validate response
-	require.NoError(t, err)
-	require.False(t, result.IsError)
-	require.Len(t, result.Content, 1)
+			// Configure mock
+			setup.mockWIT.CreateWorkItemFn = func(_ context.Context, args workitemtracking.CreateWorkItemArgs) (*workitemtracking.WorkItem, error) {
+				require.Equal(t, "TestProject", *args.Project)
+				require.Equal(t, tc.wiType, *args.Type)
 
-	textContent, ok := result.Content[0].(*mcp.TextContent)
-	require.True(t, ok)
-	require.NotEmpty(t, textContent.Text)
-	require.Contains(t, textContent.Text, "Created work item #100")
-	require.Contains(t, textContent.Text, "New Bug")
+				id := 100
+
+				return &workitemtracking.WorkItem{
+					Id:     &id,
+					Fields: &tc.fields,
+				}, nil
+			}
+
+			// Call tool
+			result, err := setup.clientSession.CallTool(setup.ctx, &mcp.CallToolParams{
+				Name:      "create_work_item",
+				Arguments: tc.args,
+			})
+
+			// Validate response
+			require.NoError(t, err)
+			require.False(t, result.IsError)
+			require.Len(t, result.Content, 1)
+
+			textContent, ok := result.Content[0].(*mcp.TextContent)
+			require.True(t, ok)
+			require.NotEmpty(t, textContent.Text)
+
+			for _, expectedText := range tc.contains {
+				require.Contains(t, textContent.Text, expectedText)
+			}
+		})
+	}
 }
 
 func TestIntegration_UpdateWorkItem(t *testing.T) {
-	setup := setupTestServer(t)
-
-	// Configure mock
-	setup.mockWIT.UpdateWorkItemFn = func(_ context.Context, args workitemtracking.UpdateWorkItemArgs) (*workitemtracking.WorkItem, error) {
-		require.NotNil(t, args.Project)
-		require.NotNil(t, args.Id)
-		require.Equal(t, "TestProject", *args.Project)
-		require.Equal(t, 42, *args.Id)
-
-		// Extract updated fields from document
-		var title, state string
-
-		if args.Document != nil {
-			for _, op := range *args.Document {
-				if op.Path == nil {
-					continue
-				}
-
-				switch *op.Path {
-				case "/fields/System.Title":
-					title = op.Value.(string) //nolint:forcetypeassert // Test mock data
-				case "/fields/System.State":
-					state = op.Value.(string) //nolint:forcetypeassert // Test mock data
-				}
-			}
-		}
-
-		id := *args.Id
-
-		return &workitemtracking.WorkItem{
-			Id: &id,
-			Fields: &map[string]any{
-				"System.Title":        title,
-				"System.State":        state,
+	testCases := []struct {
+		name     string
+		id       int
+		args     map[string]any
+		fields   map[string]any
+		contains []string
+	}{
+		{
+			name: "title and state",
+			id:   42,
+			args: map[string]any{
+				"id":    42,
+				"title": "Updated Title",
+				"state": "Resolved",
+			},
+			fields: map[string]any{
+				"System.Title":        "Updated Title",
+				"System.State":        "Resolved",
 				"System.WorkItemType": "Bug",
 			},
-		}, nil
+			contains: []string{"Updated Title", "Resolved"},
+		},
+		{
+			name: "severity and reason",
+			id:   100,
+			args: map[string]any{
+				"id":       100,
+				"severity": "Critical",
+				"reason":   "Security incident",
+			},
+			fields: map[string]any{
+				"System.Title":                   "Bug with Severity",
+				"System.State":                   "Active",
+				"System.WorkItemType":            "Bug",
+				"Microsoft.VSTS.Common.Severity": "Critical",
+				"System.Reason":                  "Security incident",
+			},
+			contains: []string{"Bug with Severity", "Active"},
+		},
 	}
 
-	// Call tool
-	result, err := setup.clientSession.CallTool(setup.ctx, &mcp.CallToolParams{
-		Name: "update_work_item",
-		Arguments: map[string]any{
-			"id":    42,
-			"title": "Updated Title",
-			"state": "Resolved",
-		},
-	})
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			setup := setupTestServer(t)
 
-	// Validate response
-	require.NoError(t, err)
-	require.False(t, result.IsError)
-	require.Len(t, result.Content, 1)
+			// Configure mock
+			setup.mockWIT.UpdateWorkItemFn = func(_ context.Context, args workitemtracking.UpdateWorkItemArgs) (*workitemtracking.WorkItem, error) {
+				require.Equal(t, "TestProject", *args.Project)
+				require.Equal(t, tc.id, *args.Id)
 
-	textContent, ok := result.Content[0].(*mcp.TextContent)
-	require.True(t, ok)
-	require.NotEmpty(t, textContent.Text)
-	require.Contains(t, textContent.Text, "Updated Title")
-	require.Contains(t, textContent.Text, "Resolved")
+				return &workitemtracking.WorkItem{
+					Id:     args.Id,
+					Fields: &tc.fields,
+				}, nil
+			}
+
+			// Call tool
+			result, err := setup.clientSession.CallTool(setup.ctx, &mcp.CallToolParams{
+				Name:      "update_work_item",
+				Arguments: tc.args,
+			})
+
+			// Validate response
+			require.NoError(t, err)
+			require.False(t, result.IsError)
+			require.Len(t, result.Content, 1)
+
+			textContent, ok := result.Content[0].(*mcp.TextContent)
+			require.True(t, ok)
+			require.NotEmpty(t, textContent.Text)
+
+			for _, expectedText := range tc.contains {
+				require.Contains(t, textContent.Text, expectedText)
+			}
+		})
+	}
 }
 
 func TestIntegration_AddComment(t *testing.T) {
