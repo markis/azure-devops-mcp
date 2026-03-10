@@ -16,7 +16,7 @@ MCP (Model Context Protocol) server for Azure DevOps work item management. Allow
 - ✅ Create new work items
 - ✅ Update existing work items
 - ✅ Add comments to work items
-- ✅ Full field support (story points, acceptance criteria, area/iteration paths, etc.)
+- ✅ Full field support (severity, time tracking, story points, acceptance criteria, area/iteration paths, etc.)
 - ✅ HTML to Markdown conversion for descriptions
 
 ## Installation
@@ -97,17 +97,13 @@ The server runs over stdio and follows the [Model Context Protocol](https://mode
 
 ### Configuring MCP Clients
 
-You can configure the server using either:
-1. **Pre-built binary** (recommended): Download from releases and use the binary path
-2. **Go run**: Run directly from source (requires Go installed)
-
-#### Claude Code (CLI)
+<details>
+<summary><b>Claude Code (CLI)</b></summary>
 
 Claude Code is Anthropic's CLI tool for developers with agentic workflows and deep codebase awareness.
 
-Add to your Claude Code configuration file:
-
-**All platforms**: `~/.claude/settings.json` (user-level) or `.claude/settings.json` (project-level)
+**Config file location:**
+- All platforms: `~/.claude/settings.json` (user-level) or `.claude/settings.json` (project-level)
 
 **Using pre-built binary:**
 ```json
@@ -142,59 +138,21 @@ Add to your Claude Code configuration file:
 }
 ```
 
-Alternatively, use the CLI command:
+**CLI shortcut:**
 ```bash
 claude mcp add azure-devops /usr/local/bin/azure-devops-mcp
 ```
 
-#### Claude Desktop
+</details>
+
+<details>
+<summary><b>Claude Desktop</b></summary>
 
 Claude Desktop is Anthropic's desktop app with a graphical interface.
 
-Add to your Claude Desktop configuration file:
-
-**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-
-**Using pre-built binary:**
-```json
-{
-  "mcpServers": {
-    "azure-devops": {
-      "command": "/usr/local/bin/azure-devops-mcp",
-      "env": {
-        "AZURE_DEVOPS_ORG_URL": "https://dev.azure.com/your-org",
-        "AZURE_DEVOPS_PAT": "your-personal-access-token",
-        "AZURE_DEVOPS_PROJECT": "your-project-name"
-      }
-    }
-  }
-}
-```
-
-**Using go run:**
-```json
-{
-  "mcpServers": {
-    "azure-devops": {
-      "command": "go",
-      "args": ["run", "github.com/markis/azure-devops-mcp/cmd/azure-devops-mcp@latest"],
-      "env": {
-        "AZURE_DEVOPS_ORG_URL": "https://dev.azure.com/your-org",
-        "AZURE_DEVOPS_PAT": "your-personal-access-token",
-        "AZURE_DEVOPS_PROJECT": "your-project-name"
-      }
-    }
-  }
-}
-```
-
-#### Cline (VS Code Extension)
-
-Add to your Cline MCP settings file:
-
-**macOS/Linux**: `~/.config/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
-**Windows**: `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`
+**Config file location:**
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
 
 **Using pre-built binary:**
 ```json
@@ -229,19 +187,70 @@ Add to your Cline MCP settings file:
 }
 ```
 
-#### OpenCode
+</details>
+
+<details>
+<summary><b>Cline (VS Code Extension)</b></summary>
+
+**Config file location:**
+- macOS/Linux: `~/.config/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
+- Windows: `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`
+
+You can also access this file from Cline's UI: Click the MCP Servers icon → Configure tab → "Configure MCP Servers"
+
+**Using pre-built binary:**
+```json
+{
+  "mcpServers": {
+    "azure-devops": {
+      "command": "/usr/local/bin/azure-devops-mcp",
+      "env": {
+        "AZURE_DEVOPS_ORG_URL": "https://dev.azure.com/your-org",
+        "AZURE_DEVOPS_PAT": "your-personal-access-token",
+        "AZURE_DEVOPS_PROJECT": "your-project-name"
+      }
+    }
+  }
+}
+```
+
+**Using go run:**
+```json
+{
+  "mcpServers": {
+    "azure-devops": {
+      "command": "go",
+      "args": ["run", "github.com/markis/azure-devops-mcp/cmd/azure-devops-mcp@latest"],
+      "env": {
+        "AZURE_DEVOPS_ORG_URL": "https://dev.azure.com/your-org",
+        "AZURE_DEVOPS_PAT": "your-personal-access-token",
+        "AZURE_DEVOPS_PROJECT": "your-project-name"
+      }
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><b>OpenCode</b></summary>
 
 Add to your OpenCode MCP configuration:
 
-**macOS/Linux**: `~/.config/opencode/mcp.json`
+**Config file location:**
+- macOS/Linux/WSL: `~/.config/opencode/opencode.jsonc`
 
 **Using pre-built binary:**
 ```json
 {
-  "mcpServers": {
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
     "azure-devops": {
-      "command": "/usr/local/bin/azure-devops-mcp",
-      "env": {
+      "type": "local",
+      "command": ["/usr/local/bin/azure-devops-mcp"],
+      "enabled": true,
+      "environment": {
         "AZURE_DEVOPS_ORG_URL": "https://dev.azure.com/your-org",
         "AZURE_DEVOPS_PAT": "your-personal-access-token",
         "AZURE_DEVOPS_PROJECT": "your-project-name"
@@ -254,11 +263,13 @@ Add to your OpenCode MCP configuration:
 **Using go run:**
 ```json
 {
-  "mcpServers": {
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
     "azure-devops": {
-      "command": "go",
-      "args": ["run", "github.com/markis/azure-devops-mcp/cmd/azure-devops-mcp@latest"],
-      "env": {
+      "type": "local",
+      "command": ["go", "run", "github.com/markis/azure-devops-mcp/cmd/azure-devops-mcp@latest"],
+      "enabled": true,
+      "environment": {
         "AZURE_DEVOPS_ORG_URL": "https://dev.azure.com/your-org",
         "AZURE_DEVOPS_PAT": "your-personal-access-token",
         "AZURE_DEVOPS_PROJECT": "your-project-name"
@@ -267,6 +278,8 @@ Add to your OpenCode MCP configuration:
   }
 }
 ```
+
+</details>
 
 **Note**: After adding the configuration, restart your MCP client for the changes to take effect.
 
