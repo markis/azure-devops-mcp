@@ -3,6 +3,7 @@ package controller_test
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/markis/azure-devops-mcp/internal/controller"
 )
@@ -222,5 +223,291 @@ func TestFlexInt_MarshalJSON(t *testing.T) {
 	expected := `123`
 	if string(data) != expected {
 		t.Errorf("expected %s, got %s", expected, string(data))
+	}
+}
+
+func TestFlexDateTime_UnmarshalJSON_RFC3339(t *testing.T) {
+	var dt controller.FlexDateTime
+
+	err := json.Unmarshal([]byte(`"2024-03-15T10:30:00Z"`), &dt)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	expected := time.Date(2024, 3, 15, 10, 30, 0, 0, time.UTC)
+
+	actual := time.Time(dt)
+	if !actual.Equal(expected) {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+}
+
+func TestFlexDateTime_UnmarshalJSON_RFC3339Nano(t *testing.T) {
+	var dt controller.FlexDateTime
+
+	err := json.Unmarshal([]byte(`"2024-03-15T10:30:00.123456789Z"`), &dt)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	expected := time.Date(2024, 3, 15, 10, 30, 0, 123456789, time.UTC)
+
+	actual := time.Time(dt)
+	if !actual.Equal(expected) {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+}
+
+func TestFlexDateTime_UnmarshalJSON_WithoutTimezone(t *testing.T) {
+	var dt controller.FlexDateTime
+
+	err := json.Unmarshal([]byte(`"2024-03-15T10:30:00"`), &dt)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	expected := time.Date(2024, 3, 15, 10, 30, 0, 0, time.UTC)
+
+	actual := time.Time(dt)
+	if !actual.Equal(expected) {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+}
+
+func TestFlexDateTime_UnmarshalJSON_DateOnly(t *testing.T) {
+	var dt controller.FlexDateTime
+
+	err := json.Unmarshal([]byte(`"2024-03-15"`), &dt)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	expected := time.Date(2024, 3, 15, 0, 0, 0, 0, time.UTC)
+
+	actual := time.Time(dt)
+	if !actual.Equal(expected) {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+}
+
+func TestFlexDateTime_UnmarshalJSON_EmptyString(t *testing.T) {
+	var dt controller.FlexDateTime
+
+	err := json.Unmarshal([]byte(`""`), &dt)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	actual := time.Time(dt)
+	if !actual.IsZero() {
+		t.Errorf("expected zero time, got %v", actual)
+	}
+}
+
+func TestFlexDateTime_UnmarshalJSON_Null(t *testing.T) {
+	var dt controller.FlexDateTime
+
+	err := json.Unmarshal([]byte(`null`), &dt)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	actual := time.Time(dt)
+	if !actual.IsZero() {
+		t.Errorf("expected zero time, got %v", actual)
+	}
+}
+
+func TestFlexDateTime_UnmarshalJSON_InvalidFormat(t *testing.T) {
+	var dt controller.FlexDateTime
+
+	err := json.Unmarshal([]byte(`"not a date"`), &dt)
+	if err == nil {
+		t.Error("expected error for invalid date format, got nil")
+	}
+}
+
+func TestFlexDateTime_UnmarshalJSON_InvalidType(t *testing.T) {
+	var dt controller.FlexDateTime
+
+	err := json.Unmarshal([]byte(`123`), &dt)
+	if err == nil {
+		t.Error("expected error for non-string type, got nil")
+	}
+}
+
+func TestFlexDateTime_MarshalJSON(t *testing.T) {
+	dt := controller.FlexDateTime(time.Date(2024, 3, 15, 10, 30, 0, 0, time.UTC))
+
+	data, err := json.Marshal(dt)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	expected := `"2024-03-15T10:30:00Z"`
+	if string(data) != expected {
+		t.Errorf("expected %s, got %s", expected, string(data))
+	}
+}
+
+func TestFlexDateTime_MarshalJSON_ZeroTime(t *testing.T) {
+	dt := controller.FlexDateTime(time.Time{})
+
+	data, err := json.Marshal(dt)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	expected := `null`
+	if string(data) != expected {
+		t.Errorf("expected %s, got %s", expected, string(data))
+	}
+}
+
+func TestFlexBool_UnmarshalJSON_Bool(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected bool
+	}{
+		{"true", `true`, true},
+		{"false", `false`, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var b controller.FlexBool
+
+			err := json.Unmarshal([]byte(tt.input), &b)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if bool(b) != tt.expected {
+				t.Errorf("expected %v, got %v", tt.expected, b)
+			}
+		})
+	}
+}
+
+func TestFlexBool_UnmarshalJSON_String(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected bool
+	}{
+		{"string true", `"true"`, true},
+		{"string false", `"false"`, false},
+		{"string yes", `"yes"`, true},
+		{"string no", `"no"`, false},
+		{"string 1", `"1"`, true},
+		{"string 0", `"0"`, false},
+		{"string Yes (caps)", `"Yes"`, true},
+		{"string No (caps)", `"No"`, false},
+		{"string TRUE (upper)", `"TRUE"`, true},
+		{"string FALSE (upper)", `"FALSE"`, false},
+		{"empty string", `""`, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var b controller.FlexBool
+
+			err := json.Unmarshal([]byte(tt.input), &b)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if bool(b) != tt.expected {
+				t.Errorf("expected %v, got %v", tt.expected, b)
+			}
+		})
+	}
+}
+
+func TestFlexBool_UnmarshalJSON_Number(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected bool
+	}{
+		{"number 0", `0`, false},
+		{"number 1", `1`, true},
+		{"number 2", `2`, true},
+		{"number -1", `-1`, true},
+		{"float 0.0", `0.0`, false},
+		{"float 1.5", `1.5`, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var b controller.FlexBool
+
+			err := json.Unmarshal([]byte(tt.input), &b)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if bool(b) != tt.expected {
+				t.Errorf("expected %v, got %v", tt.expected, b)
+			}
+		})
+	}
+}
+
+func TestFlexBool_UnmarshalJSON_Null(t *testing.T) {
+	var b controller.FlexBool
+
+	err := json.Unmarshal([]byte(`null`), &b)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if bool(b) != false {
+		t.Errorf("expected false, got %v", b)
+	}
+}
+
+func TestFlexBool_UnmarshalJSON_InvalidString(t *testing.T) {
+	var b controller.FlexBool
+
+	err := json.Unmarshal([]byte(`"invalid"`), &b)
+	if err == nil {
+		t.Error("expected error for invalid string, got nil")
+	}
+}
+
+func TestFlexBool_UnmarshalJSON_InvalidType(t *testing.T) {
+	var b controller.FlexBool
+
+	err := json.Unmarshal([]byte(`[]`), &b)
+	if err == nil {
+		t.Error("expected error for invalid type, got nil")
+	}
+}
+
+func TestFlexBool_MarshalJSON(t *testing.T) {
+	tests := []struct {
+		name     string
+		value    bool
+		expected string
+	}{
+		{"true", true, `true`},
+		{"false", false, `false`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := controller.FlexBool(tt.value)
+
+			data, err := json.Marshal(b)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if string(data) != tt.expected {
+				t.Errorf("expected %s, got %s", tt.expected, string(data))
+			}
+		})
 	}
 }

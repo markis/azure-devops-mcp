@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7"
@@ -32,25 +33,142 @@ var ErrNoFieldsToUpdate = errors.New(
 // Field path constants for Azure DevOps work item fields.
 // These are used as pointers in JsonPatchOperation.Path.
 var (
-	fieldPathTitle              = "/fields/System.Title"
-	fieldPathState              = "/fields/System.State"
-	fieldPathDescription        = "/fields/System.Description"
-	fieldPathAssignedTo         = "/fields/System.AssignedTo"
-	fieldPathTags               = "/fields/System.Tags"
-	fieldPathIterationPath      = "/fields/System.IterationPath"
-	fieldPathAreaPath           = "/fields/System.AreaPath"
+	// System fields.
+	fieldPathTitle         = "/fields/System.Title"
+	fieldPathState         = "/fields/System.State"
+	fieldPathDescription   = "/fields/System.Description"
+	fieldPathAssignedTo    = "/fields/System.AssignedTo"
+	fieldPathTags          = "/fields/System.Tags"
+	fieldPathIterationPath = "/fields/System.IterationPath"
+	fieldPathAreaPath      = "/fields/System.AreaPath"
+	fieldPathReason        = "/fields/System.Reason"
+
+	// Common fields.
 	fieldPathAcceptanceCriteria = "/fields/Microsoft.VSTS.Common.AcceptanceCriteria"
 	fieldPathPriority           = "/fields/Microsoft.VSTS.Common.Priority"
 	fieldPathSeverity           = "/fields/Microsoft.VSTS.Common.Severity"
 	fieldPathActivity           = "/fields/Microsoft.VSTS.Common.Activity"
 	fieldPathValueArea          = "/fields/Microsoft.VSTS.Common.ValueArea"
-	fieldPathStoryPoints        = "/fields/Microsoft.VSTS.Scheduling.StoryPoints"
-	fieldPathOriginalEstimate   = "/fields/Microsoft.VSTS.Scheduling.OriginalEstimate"
-	fieldPathCompletedWork      = "/fields/Microsoft.VSTS.Scheduling.CompletedWork"
-	fieldPathRemainingWork      = "/fields/Microsoft.VSTS.Scheduling.RemainingWork"
-	fieldPathEffort             = "/fields/Microsoft.VSTS.Scheduling.Effort"
-	fieldPathSize               = "/fields/Custom.Teeshirtsizing"
-	fieldPathReason             = "/fields/System.Reason"
+
+	// Scheduling fields.
+	fieldPathStoryPoints      = "/fields/Microsoft.VSTS.Scheduling.StoryPoints"
+	fieldPathOriginalEstimate = "/fields/Microsoft.VSTS.Scheduling.OriginalEstimate"
+	fieldPathCompletedWork    = "/fields/Microsoft.VSTS.Scheduling.CompletedWork"
+	fieldPathRemainingWork    = "/fields/Microsoft.VSTS.Scheduling.RemainingWork"
+	fieldPathEffort           = "/fields/Microsoft.VSTS.Scheduling.Effort"
+	fieldPathStartDate        = "/fields/Microsoft.VSTS.Scheduling.StartDate"
+	fieldPathFinishDate       = "/fields/Microsoft.VSTS.Scheduling.FinishDate"
+	fieldPathTargetDate       = "/fields/Microsoft.VSTS.Scheduling.TargetDate"
+	fieldPathDueDate          = "/fields/Microsoft.VSTS.Scheduling.DueDate"
+
+	// Status tracking fields.
+	fieldPathActivatedBy     = "/fields/Microsoft.VSTS.Common.ActivatedBy"
+	fieldPathActivatedDate   = "/fields/Microsoft.VSTS.Common.ActivatedDate"
+	fieldPathResolvedBy      = "/fields/Microsoft.VSTS.Common.ResolvedBy"
+	fieldPathResolvedDate    = "/fields/Microsoft.VSTS.Common.ResolvedDate"
+	fieldPathResolvedReason  = "/fields/Microsoft.VSTS.Common.ResolvedReason"
+	fieldPathClosedBy        = "/fields/Microsoft.VSTS.Common.ClosedBy"
+	fieldPathClosedDate      = "/fields/Microsoft.VSTS.Common.ClosedDate"
+	fieldPathStateChangeDate = "/fields/Microsoft.VSTS.Common.StateChangeDate"
+
+	// Planning fields.
+	fieldPathBusinessValue   = "/fields/Microsoft.VSTS.Common.BusinessValue"
+	fieldPathStackRank       = "/fields/Microsoft.VSTS.Common.StackRank"
+	fieldPathRisk            = "/fields/Microsoft.VSTS.Common.Risk"
+	fieldPathTimeCriticality = "/fields/Microsoft.VSTS.Common.TimeCriticality"
+	fieldPathRating          = "/fields/Microsoft.VSTS.Common.Rating"
+	fieldPathTriage          = "/fields/Microsoft.VSTS.Common.Triage"
+	fieldPathReviewedBy      = "/fields/Microsoft.VSTS.Common.ReviewedBy"
+
+	// Build integration fields.
+	fieldPathFoundIn          = "/fields/Microsoft.VSTS.Build.FoundIn"
+	fieldPathIntegrationBuild = "/fields/Microsoft.VSTS.Build.IntegrationBuild"
+
+	// Fields for Bug work items.
+	fieldPathReproSteps  = "/fields/Microsoft.VSTS.TCM.ReproSteps"
+	fieldPathSystemInfo  = "/fields/Microsoft.VSTS.TCM.SystemInfo"
+	fieldPathBlocked     = "/fields/Microsoft.VSTS.CMMI.Blocked"
+	fieldPathProposedFix = "/fields/Microsoft.VSTS.CMMI.ProposedFix"
+
+	// Feature-specific fields.
+	fieldPathMitigationPlan = "/fields/Microsoft.VSTS.CMMI.MitigationPlan"
+
+	// Test Case-specific fields.
+	fieldPathSteps                = "/fields/Microsoft.VSTS.TCM.Steps"
+	fieldPathAutomatedTestName    = "/fields/Microsoft.VSTS.TCM.AutomatedTestName"
+	fieldPathAutomatedTestStorage = "/fields/Microsoft.VSTS.TCM.AutomatedTestStorage"
+	fieldPathAutomatedTestType    = "/fields/Microsoft.VSTS.TCM.AutomatedTestType"
+	fieldPathAutomatedTestID      = "/fields/Microsoft.VSTS.TCM.AutomatedTestId"
+	fieldPathAutomationStatus     = "/fields/Microsoft.VSTS.TCM.AutomationStatus"
+	fieldPathParameters           = "/fields/Microsoft.VSTS.TCM.Parameters"
+	fieldPathLocalDataSource      = "/fields/Microsoft.VSTS.TCM.LocalDataSource"
+
+	// Code Review fields.
+	fieldPathContext        = "/fields/Microsoft.VSTS.CodeReview.Context"
+	fieldPathContextCode    = "/fields/Microsoft.VSTS.CodeReview.ContextCode"
+	fieldPathContextOwner   = "/fields/Microsoft.VSTS.CodeReview.ContextOwner"
+	fieldPathContextType    = "/fields/Microsoft.VSTS.CodeReview.ContextType"
+	fieldPathAcceptedBy     = "/fields/Microsoft.VSTS.CodeReview.AcceptedBy"
+	fieldPathAcceptedDate   = "/fields/Microsoft.VSTS.CodeReview.AcceptedDate"
+	fieldPathClosedStatus   = "/fields/Microsoft.VSTS.CodeReview.ClosedStatus"
+	fieldPathClosingComment = "/fields/Microsoft.VSTS.CodeReview.ClosingComment"
+
+	// Custom fields - Dates.
+	fieldPathMarketDate         = "/fields/Custom.MarketDate"
+	fieldPathDevCompleteDate    = "/fields/Custom.DevCompleteDate"
+	fieldPathQCStartDate        = "/fields/Custom.QCStartDate"
+	fieldPathQCCompleteDate     = "/fields/Custom.QCCompleteDate"
+	fieldPathOriginalTargetDate = "/fields/Custom.OriginalTargetDate"
+
+	// Custom fields - Salesforce integration.
+	fieldPathSalesforceCaseNumber         = "/fields/Custom.SalesforceCaseNumber"
+	fieldPathSalesforceCaseStatus         = "/fields/Custom.SalesforceCaseStatus"
+	fieldPathSalesforceCaseClosed         = "/fields/Custom.SalesforceCaseClosed"
+	fieldPathSalesforceURL                = "/fields/Custom.SalesforceURL"
+	fieldPathSalesforceEscalatingEngineer = "/fields/Custom.SalesforceEscalatingEngineer"
+	fieldPathSalesforceEscalationReason   = "/fields/Custom.SalesforceEscalationReason"
+	fieldPathEscalationAttachmentsFolder  = "/fields/Custom.EscalationAttachmentsFolder"
+
+	// Custom fields - Requirements.
+	fieldPathFunctionalRequirements    = "/fields/Custom.FunctionalRequirements"
+	fieldPathNonfunctionalRequirements = "/fields/Custom.NonfunctionalRequirements"
+	fieldPathBusinessCase              = "/fields/Custom.BusinessCase"
+	fieldPathSuggestedTests            = "/fields/Custom.SuggestedTests"
+	fieldPathRejectedIdeas             = "/fields/Custom.RejectedIdeas"
+	fieldPathResources                 = "/fields/Custom.Resources"
+
+	// Custom fields - Quality/Review.
+	fieldPathApprovedBy                  = "/fields/Custom.ApprovedBy"
+	fieldPathInitialDetailQuality        = "/fields/Custom.InitialDetailQuality"
+	fieldPathInitialDetailQualityComment = "/fields/Custom.InitialDetailQualityComment"
+	fieldPathDocumentation               = "/fields/Custom.Documentation"
+	fieldPathRCAReason                   = "/fields/Custom.RCAReason"
+
+	// Custom fields - Metrics.
+	fieldPathDaysAwaitingDev          = "/fields/Custom.DaysAwaitingDev"
+	fieldPathDaysAwaitingSupport      = "/fields/Custom.DaysAwaitingSupport"
+	fieldPathDaysSinceLastDevUpdate   = "/fields/Custom.DaysSinceLastDevUpdate"
+	fieldPathTimeSpent                = "/fields/Custom.TimeSpent"
+	fieldPathPrioritizationScore      = "/fields/Custom.PrioritizationScore"
+	fieldPathConfidence               = "/fields/Custom.Confidence"
+	fieldPathRemainingWorkChangedDate = "/fields/Custom.RemainingWorkChangedDate"
+
+	// Custom fields - Security.
+	fieldPathCVENumber           = "/fields/Custom.CVENumber"
+	fieldPathVulnerabilitySource = "/fields/Custom.VulnerabilitySource"
+
+	// Custom fields - Feature-specific.
+	fieldPathAtRisk       = "/fields/Custom.AtRisk"
+	fieldPathDeliveryRisk = "/fields/Custom.DeliveryRisk"
+	fieldPathRiskReason   = "/fields/Custom.RiskReason"
+
+	// Custom fields - User Story-specific.
+	fieldPathDevOwner = "/fields/Custom.DevOwner"
+	fieldPathPoker    = "/fields/Custom.Poker"
+
+	// Custom fields - Other.
+	fieldPathSize          = "/fields/Custom.Teeshirtsizing"
+	fieldPathClosedInBuild = "/fields/Custom.ClosedinBuild"
 )
 
 // WorkItemSummary is a lightweight representation for list operations.
@@ -88,10 +206,42 @@ type WorkItem struct {
 	ValueArea          string  `json:"value_area,omitempty"          jsonschema:"Value area (Business/Architectural)"`
 	Reason             string  `json:"reason,omitempty"              jsonschema:"Reason for current state"`
 	URL                string  `json:"url"                           jsonschema:"Work item URL"`
+
+	// Date fields
+	StartDate       *time.Time `json:"start_date,omitempty"        jsonschema:"Planned start date"`
+	FinishDate      *time.Time `json:"finish_date,omitempty"       jsonschema:"Planned finish date"`
+	TargetDate      *time.Time `json:"target_date,omitempty"       jsonschema:"Target completion date"`
+	DueDate         *time.Time `json:"due_date,omitempty"          jsonschema:"Hard deadline"`
+	ActivatedDate   *time.Time `json:"activated_date,omitempty"    jsonschema:"When work item was activated"`
+	ResolvedDate    *time.Time `json:"resolved_date,omitempty"     jsonschema:"When work item was resolved"`
+	ClosedDate      *time.Time `json:"closed_date,omitempty"       jsonschema:"When work item was closed"`
+	StateChangeDate *time.Time `json:"state_change_date,omitempty" jsonschema:"When state last changed"`
+
+	// Planning fields
+	BusinessValue   *int     `json:"business_value,omitempty"   jsonschema:"Business value score"`
+	StackRank       *float64 `json:"stack_rank,omitempty"       jsonschema:"Backlog ordering rank"`
+	Risk            string   `json:"risk,omitempty"             jsonschema:"Risk level"`
+	TimeCriticality *float64 `json:"time_criticality,omitempty" jsonschema:"Time sensitivity"`
+
+	// Status tracking
+	ActivatedBy string `json:"activated_by,omitempty" jsonschema:"Who activated"`
+	ResolvedBy  string `json:"resolved_by,omitempty"  jsonschema:"Who resolved"`
+	ClosedBy    string `json:"closed_by,omitempty"    jsonschema:"Who closed"`
+
+	// Build integration
+	FoundIn          string `json:"found_in,omitempty"          jsonschema:"Build where bug was found"`
+	IntegrationBuild string `json:"integration_build,omitempty" jsonschema:"Build with fix"`
+
+	// Custom fields (high priority)
+	AtRisk     *bool      `json:"at_risk,omitempty"     jsonschema:"Is work item at risk"`
+	CVENumber  string     `json:"cve_number,omitempty"  jsonschema:"CVE identifier"`
+	DevOwner   string     `json:"dev_owner,omitempty"   jsonschema:"Development owner"`
+	MarketDate *time.Time `json:"market_date,omitempty" jsonschema:"Market release date"`
 }
 
 // CommonFields holds fields shared between CreateOptions and UpdateOptions.
 type CommonFields struct {
+	// Existing fields
 	AssignedTo       string
 	Description      string
 	IterationPath    string
@@ -106,12 +256,42 @@ type CommonFields struct {
 	Severity         string
 	Activity         string
 	ValueArea        string
+
+	// High-priority shared fields
+	StartDate        *time.Time
+	FinishDate       *time.Time
+	TargetDate       *time.Time
+	BusinessValue    *int
+	StackRank        *float64
+	Risk             string
+	FoundIn          string
+	IntegrationBuild string
 }
 
 // CreateOptions holds optional fields for creating a work item.
 type CreateOptions struct {
+	// Embedded common fields (includes high-priority shared fields)
 	CommonFields
 
+	// Optional field groups (use pointers for true optionality)
+	DateFields        *DateFields
+	StatusFields      *StatusFields
+	PlanningFields    *PlanningFields
+	BuildFields       *BuildFields
+	RequirementFields *RequirementFields
+	QualityFields     *QualityFields
+	MetricsFields     *MetricsFields
+	SecurityFields    *SecurityFields
+	SalesforceFields  *SalesforceFields
+
+	// Type-specific fields (will be ignored if not applicable to work item type)
+	FeatureFields    *FeatureSpecificFields
+	BugFields        *BugSpecificFields
+	UserStoryFields  *UserStorySpecificFields
+	TestCaseFields   *TestCaseSpecificFields
+	CodeReviewFields *CodeReviewFields
+
+	// Existing
 	Tags string
 }
 
@@ -120,6 +300,25 @@ type CreateOptions struct {
 type UpdateOptions struct {
 	CommonFields
 
+	// Optional field groups (same as CreateOptions)
+	DateFields        *DateFields
+	StatusFields      *StatusFields
+	PlanningFields    *PlanningFields
+	BuildFields       *BuildFields
+	RequirementFields *RequirementFields
+	QualityFields     *QualityFields
+	MetricsFields     *MetricsFields
+	SecurityFields    *SecurityFields
+	SalesforceFields  *SalesforceFields
+
+	// Type-specific fields
+	FeatureFields    *FeatureSpecificFields
+	BugFields        *BugSpecificFields
+	UserStoryFields  *UserStorySpecificFields
+	TestCaseFields   *TestCaseSpecificFields
+	CodeReviewFields *CodeReviewFields
+
+	// Update-specific fields
 	Title              string
 	State              string
 	AcceptanceCriteria string
@@ -237,6 +436,39 @@ func addIntField(ops *[]webapi.JsonPatchOperation, op *webapi.Operation, path *s
 	}
 }
 
+// addDateField appends a date field operation if the value is non-nil.
+func addDateField(ops *[]webapi.JsonPatchOperation, op *webapi.Operation, path *string, value *time.Time) {
+	if value != nil && !value.IsZero() {
+		// Format as ISO8601 for Azure DevOps
+		*ops = append(*ops, webapi.JsonPatchOperation{
+			Op:    op,
+			Path:  path,
+			Value: value.Format(time.RFC3339),
+		})
+	}
+}
+
+// addBoolField appends a bool field operation if the value is non-nil.
+func addBoolField(ops *[]webapi.JsonPatchOperation, op *webapi.Operation, path *string, value *bool) {
+	if value != nil {
+		*ops = append(*ops, webapi.JsonPatchOperation{Op: op, Path: path, Value: *value})
+	}
+}
+
+// addOptionalIntField appends an int field operation if the value is non-nil.
+func addOptionalIntField(ops *[]webapi.JsonPatchOperation, op *webapi.Operation, path *string, value *int) {
+	if value != nil {
+		*ops = append(*ops, webapi.JsonPatchOperation{Op: op, Path: path, Value: *value})
+	}
+}
+
+// addOptionalFloatField appends a float field operation if the value is non-nil.
+func addOptionalFloatField(ops *[]webapi.JsonPatchOperation, op *webapi.Operation, path *string, value *float64) {
+	if value != nil {
+		*ops = append(*ops, webapi.JsonPatchOperation{Op: op, Path: path, Value: *value})
+	}
+}
+
 // CreateWorkItem creates a new work item of the given type.
 func (c *Client) CreateWorkItem(
 	ctx context.Context, project, workItemType, title string, opts CreateOptions,
@@ -247,8 +479,29 @@ func (c *Client) CreateWorkItem(
 		{Op: &add, Path: &fieldPathTitle, Value: title},
 	}
 
-	addStringField(&ops, &add, &fieldPathTags, opts.Tags)
+	// Common fields
 	buildCommonOps(&ops, &add, opts.CommonFields)
+
+	// Optional field groups
+	buildDateFieldOps(&ops, &add, opts.DateFields)
+	buildStatusFieldOps(&ops, &add, opts.StatusFields)
+	buildPlanningFieldOps(&ops, &add, opts.PlanningFields)
+	buildBuildFieldOps(&ops, &add, opts.BuildFields)
+	buildSalesforceFieldOps(&ops, &add, opts.SalesforceFields)
+	buildRequirementFieldOps(&ops, &add, opts.RequirementFields)
+	buildQualityFieldOps(&ops, &add, opts.QualityFields)
+	buildMetricsFieldOps(&ops, &add, opts.MetricsFields)
+	buildSecurityFieldOps(&ops, &add, opts.SecurityFields)
+
+	// Type-specific fields
+	buildFeatureFieldOps(&ops, &add, opts.FeatureFields)
+	buildBugFieldOps(&ops, &add, opts.BugFields)
+	buildUserStoryFieldOps(&ops, &add, opts.UserStoryFields)
+	buildTestCaseFieldOps(&ops, &add, opts.TestCaseFields)
+	buildCodeReviewFieldOps(&ops, &add, opts.CodeReviewFields)
+
+	// Tags
+	addStringField(&ops, &add, &fieldPathTags, opts.Tags)
 
 	item, err := c.wit.CreateWorkItem(ctx, workitemtracking.CreateWorkItemArgs{
 		Document: &ops,
@@ -369,6 +622,37 @@ func toWorkItem(item *workitemtracking.WorkItem) *WorkItem {
 		Activity:           fieldString(f, "Microsoft.VSTS.Common.Activity"),
 		ValueArea:          fieldString(f, "Microsoft.VSTS.Common.ValueArea"),
 		Reason:             fieldString(f, "System.Reason"),
+
+		// Date fields
+		StartDate:       fieldDateTime(f, "Microsoft.VSTS.Scheduling.StartDate"),
+		FinishDate:      fieldDateTime(f, "Microsoft.VSTS.Scheduling.FinishDate"),
+		TargetDate:      fieldDateTime(f, "Microsoft.VSTS.Scheduling.TargetDate"),
+		DueDate:         fieldDateTime(f, "Microsoft.VSTS.Scheduling.DueDate"),
+		ActivatedDate:   fieldDateTime(f, "Microsoft.VSTS.Common.ActivatedDate"),
+		ResolvedDate:    fieldDateTime(f, "Microsoft.VSTS.Common.ResolvedDate"),
+		ClosedDate:      fieldDateTime(f, "Microsoft.VSTS.Common.ClosedDate"),
+		StateChangeDate: fieldDateTime(f, "Microsoft.VSTS.Common.StateChangeDate"),
+
+		// Planning fields
+		BusinessValue:   fieldIntPtr(f, "Microsoft.VSTS.Common.BusinessValue"),
+		StackRank:       fieldFloatPtr(f, "Microsoft.VSTS.Common.StackRank"),
+		Risk:            fieldString(f, "Microsoft.VSTS.Common.Risk"),
+		TimeCriticality: fieldFloatPtr(f, "Microsoft.VSTS.Common.TimeCriticality"),
+
+		// Status tracking
+		ActivatedBy: fieldString(f, "Microsoft.VSTS.Common.ActivatedBy"),
+		ResolvedBy:  fieldString(f, "Microsoft.VSTS.Common.ResolvedBy"),
+		ClosedBy:    fieldString(f, "Microsoft.VSTS.Common.ClosedBy"),
+
+		// Build integration
+		FoundIn:          fieldString(f, "Microsoft.VSTS.Build.FoundIn"),
+		IntegrationBuild: fieldString(f, "Microsoft.VSTS.Build.IntegrationBuild"),
+
+		// Custom fields
+		AtRisk:     fieldBoolPtr(f, "Custom.AtRisk"),
+		CVENumber:  fieldString(f, "Custom.CVENumber"),
+		DevOwner:   fieldString(f, "Custom.DevOwner"),
+		MarketDate: fieldDateTime(f, "Custom.MarketDate"),
 	}
 	if item.Id != nil {
 		wi.ID = *item.Id
@@ -436,8 +720,209 @@ func fieldInt(f *map[string]any, key string) int {
 	}
 }
 
+// buildDateFieldOps constructs JSON patch operations from DateFields.
+func buildDateFieldOps(ops *[]webapi.JsonPatchOperation, operation *webapi.Operation, fields *DateFields) {
+	if fields == nil {
+		return
+	}
+
+	addDateField(ops, operation, &fieldPathStartDate, fields.StartDate)
+	addDateField(ops, operation, &fieldPathFinishDate, fields.FinishDate)
+	addDateField(ops, operation, &fieldPathTargetDate, fields.TargetDate)
+	addDateField(ops, operation, &fieldPathDueDate, fields.DueDate)
+	addDateField(ops, operation, &fieldPathMarketDate, fields.MarketDate)
+	addDateField(ops, operation, &fieldPathDevCompleteDate, fields.DevCompleteDate)
+	addDateField(ops, operation, &fieldPathQCStartDate, fields.QCStartDate)
+	addDateField(ops, operation, &fieldPathQCCompleteDate, fields.QCCompleteDate)
+	addDateField(ops, operation, &fieldPathOriginalTargetDate, fields.OriginalTargetDate)
+}
+
+// buildStatusFieldOps constructs JSON patch operations from StatusFields.
+func buildStatusFieldOps(ops *[]webapi.JsonPatchOperation, operation *webapi.Operation, fields *StatusFields) {
+	if fields == nil {
+		return
+	}
+
+	addStringField(ops, operation, &fieldPathActivatedBy, fields.ActivatedBy)
+	addDateField(ops, operation, &fieldPathActivatedDate, fields.ActivatedDate)
+	addStringField(ops, operation, &fieldPathResolvedBy, fields.ResolvedBy)
+	addDateField(ops, operation, &fieldPathResolvedDate, fields.ResolvedDate)
+	addStringField(ops, operation, &fieldPathResolvedReason, fields.ResolvedReason)
+	addStringField(ops, operation, &fieldPathClosedBy, fields.ClosedBy)
+	addDateField(ops, operation, &fieldPathClosedDate, fields.ClosedDate)
+	addDateField(ops, operation, &fieldPathStateChangeDate, fields.StateChangeDate)
+}
+
+// buildPlanningFieldOps constructs JSON patch operations from PlanningFields.
+func buildPlanningFieldOps(ops *[]webapi.JsonPatchOperation, operation *webapi.Operation, fields *PlanningFields) {
+	if fields == nil {
+		return
+	}
+
+	addOptionalIntField(ops, operation, &fieldPathBusinessValue, fields.BusinessValue)
+	addOptionalFloatField(ops, operation, &fieldPathStackRank, fields.StackRank)
+	addStringField(ops, operation, &fieldPathRisk, fields.Risk)
+	addOptionalFloatField(ops, operation, &fieldPathTimeCriticality, fields.TimeCriticality)
+	addStringField(ops, operation, &fieldPathRating, fields.Rating)
+	addStringField(ops, operation, &fieldPathTriage, fields.Triage)
+}
+
+// buildBuildFieldOps constructs JSON patch operations from BuildFields.
+func buildBuildFieldOps(ops *[]webapi.JsonPatchOperation, operation *webapi.Operation, fields *BuildFields) {
+	if fields == nil {
+		return
+	}
+
+	addStringField(ops, operation, &fieldPathFoundIn, fields.FoundIn)
+	addStringField(ops, operation, &fieldPathIntegrationBuild, fields.IntegrationBuild)
+	addStringField(ops, operation, &fieldPathClosedInBuild, fields.ClosedInBuild)
+}
+
+// buildSalesforceFieldOps constructs JSON patch operations from SalesforceFields.
+func buildSalesforceFieldOps(ops *[]webapi.JsonPatchOperation, operation *webapi.Operation, fields *SalesforceFields) {
+	if fields == nil {
+		return
+	}
+
+	addStringField(ops, operation, &fieldPathSalesforceCaseNumber, fields.CaseNumber)
+	addStringField(ops, operation, &fieldPathSalesforceCaseStatus, fields.CaseStatus)
+	addBoolField(ops, operation, &fieldPathSalesforceCaseClosed, fields.CaseClosed)
+	addStringField(ops, operation, &fieldPathSalesforceURL, fields.URL)
+	addStringField(ops, operation, &fieldPathSalesforceEscalatingEngineer, fields.EscalatingEngineer)
+	addStringField(ops, operation, &fieldPathSalesforceEscalationReason, fields.EscalationReason)
+	addStringField(ops, operation, &fieldPathEscalationAttachmentsFolder, fields.AttachmentsFolder)
+}
+
+// buildRequirementFieldOps constructs JSON patch operations from RequirementFields.
+func buildRequirementFieldOps(
+	ops *[]webapi.JsonPatchOperation, operation *webapi.Operation, fields *RequirementFields,
+) {
+	if fields == nil {
+		return
+	}
+
+	addStringField(ops, operation, &fieldPathFunctionalRequirements, fields.FunctionalRequirements)
+	addStringField(ops, operation, &fieldPathNonfunctionalRequirements, fields.NonfunctionalRequirements)
+	addStringField(ops, operation, &fieldPathBusinessCase, fields.BusinessCase)
+	addStringField(ops, operation, &fieldPathSuggestedTests, fields.SuggestedTests)
+	addStringField(ops, operation, &fieldPathRejectedIdeas, fields.RejectedIdeas)
+	addStringField(ops, operation, &fieldPathResources, fields.Resources)
+}
+
+// buildQualityFieldOps constructs JSON patch operations from QualityFields.
+func buildQualityFieldOps(ops *[]webapi.JsonPatchOperation, operation *webapi.Operation, fields *QualityFields) {
+	if fields == nil {
+		return
+	}
+
+	addStringField(ops, operation, &fieldPathApprovedBy, fields.ApprovedBy)
+	addStringField(ops, operation, &fieldPathReviewedBy, fields.ReviewedBy)
+	addStringField(ops, operation, &fieldPathInitialDetailQuality, fields.InitialDetailQuality)
+	addStringField(ops, operation, &fieldPathInitialDetailQualityComment, fields.InitialDetailQualityComment)
+	addStringField(ops, operation, &fieldPathDocumentation, fields.Documentation)
+	addStringField(ops, operation, &fieldPathRCAReason, fields.RCAReason)
+}
+
+// buildMetricsFieldOps constructs JSON patch operations from MetricsFields.
+func buildMetricsFieldOps(ops *[]webapi.JsonPatchOperation, operation *webapi.Operation, fields *MetricsFields) {
+	if fields == nil {
+		return
+	}
+
+	addOptionalIntField(ops, operation, &fieldPathDaysAwaitingDev, fields.DaysAwaitingDev)
+	addOptionalIntField(ops, operation, &fieldPathDaysAwaitingSupport, fields.DaysAwaitingSupport)
+	addOptionalIntField(ops, operation, &fieldPathDaysSinceLastDevUpdate, fields.DaysSinceLastDevUpdate)
+	addOptionalFloatField(ops, operation, &fieldPathTimeSpent, fields.TimeSpent)
+	addOptionalIntField(ops, operation, &fieldPathPrioritizationScore, fields.PrioritizationScore)
+	addOptionalIntField(ops, operation, &fieldPathConfidence, fields.Confidence)
+	addDateField(ops, operation, &fieldPathRemainingWorkChangedDate, fields.RemainingWorkChangedDate)
+}
+
+// buildSecurityFieldOps constructs JSON patch operations from SecurityFields.
+func buildSecurityFieldOps(ops *[]webapi.JsonPatchOperation, operation *webapi.Operation, fields *SecurityFields) {
+	if fields == nil {
+		return
+	}
+
+	addStringField(ops, operation, &fieldPathCVENumber, fields.CVENumber)
+	addStringField(ops, operation, &fieldPathVulnerabilitySource, fields.VulnerabilitySource)
+}
+
+// buildFeatureFieldOps constructs JSON patch operations from FeatureSpecificFields.
+func buildFeatureFieldOps(
+	ops *[]webapi.JsonPatchOperation, operation *webapi.Operation, fields *FeatureSpecificFields,
+) {
+	if fields == nil {
+		return
+	}
+
+	addBoolField(ops, operation, &fieldPathAtRisk, fields.AtRisk)
+	addStringField(ops, operation, &fieldPathDeliveryRisk, fields.DeliveryRisk)
+	addStringField(ops, operation, &fieldPathRiskReason, fields.RiskReason)
+	addStringField(ops, operation, &fieldPathMitigationPlan, fields.MitigationPlan)
+}
+
+// buildBugFieldOps constructs JSON patch operations from BugSpecificFields.
+func buildBugFieldOps(ops *[]webapi.JsonPatchOperation, operation *webapi.Operation, fields *BugSpecificFields) {
+	if fields == nil {
+		return
+	}
+
+	addStringField(ops, operation, &fieldPathReproSteps, fields.ReproSteps)
+	addStringField(ops, operation, &fieldPathSystemInfo, fields.SystemInfo)
+	addStringField(ops, operation, &fieldPathBlocked, fields.Blocked)
+	addStringField(ops, operation, &fieldPathProposedFix, fields.ProposedFix)
+}
+
+// buildUserStoryFieldOps constructs JSON patch operations from UserStorySpecificFields.
+func buildUserStoryFieldOps(
+	ops *[]webapi.JsonPatchOperation, operation *webapi.Operation, fields *UserStorySpecificFields,
+) {
+	if fields == nil {
+		return
+	}
+
+	addStringField(ops, operation, &fieldPathDevOwner, fields.DevOwner)
+	addStringField(ops, operation, &fieldPathPoker, fields.Poker)
+}
+
+// buildTestCaseFieldOps constructs JSON patch operations from TestCaseSpecificFields.
+func buildTestCaseFieldOps(
+	ops *[]webapi.JsonPatchOperation, operation *webapi.Operation, fields *TestCaseSpecificFields,
+) {
+	if fields == nil {
+		return
+	}
+
+	addStringField(ops, operation, &fieldPathSteps, fields.Steps)
+	addStringField(ops, operation, &fieldPathAutomatedTestName, fields.AutomatedTestName)
+	addStringField(ops, operation, &fieldPathAutomatedTestStorage, fields.AutomatedTestStorage)
+	addStringField(ops, operation, &fieldPathAutomatedTestType, fields.AutomatedTestType)
+	addStringField(ops, operation, &fieldPathAutomatedTestID, fields.AutomatedTestID)
+	addStringField(ops, operation, &fieldPathAutomationStatus, fields.AutomationStatus)
+	addStringField(ops, operation, &fieldPathParameters, fields.Parameters)
+	addStringField(ops, operation, &fieldPathLocalDataSource, fields.LocalDataSource)
+}
+
+// buildCodeReviewFieldOps constructs JSON patch operations from CodeReviewFields.
+func buildCodeReviewFieldOps(ops *[]webapi.JsonPatchOperation, operation *webapi.Operation, fields *CodeReviewFields) {
+	if fields == nil {
+		return
+	}
+
+	addStringField(ops, operation, &fieldPathContext, fields.Context)
+	addOptionalIntField(ops, operation, &fieldPathContextCode, fields.ContextCode)
+	addStringField(ops, operation, &fieldPathContextOwner, fields.ContextOwner)
+	addStringField(ops, operation, &fieldPathContextType, fields.ContextType)
+	addStringField(ops, operation, &fieldPathAcceptedBy, fields.AcceptedBy)
+	addDateField(ops, operation, &fieldPathAcceptedDate, fields.AcceptedDate)
+	addStringField(ops, operation, &fieldPathClosedStatus, fields.ClosedStatus)
+	addStringField(ops, operation, &fieldPathClosingComment, fields.ClosingComment)
+}
+
 // buildCommonOps adds patch operations for CommonFields.
 func buildCommonOps(ops *[]webapi.JsonPatchOperation, operation *webapi.Operation, fields CommonFields) {
+	// Existing fields
 	addStringField(ops, operation, &fieldPathAssignedTo, fields.AssignedTo)
 	addStringField(ops, operation, &fieldPathDescription, fields.Description)
 	addStringField(ops, operation, &fieldPathIterationPath, fields.IterationPath)
@@ -454,6 +939,20 @@ func buildCommonOps(ops *[]webapi.JsonPatchOperation, operation *webapi.Operatio
 	addFloatField(ops, operation, &fieldPathCompletedWork, fields.CompletedWork)
 	addFloatField(ops, operation, &fieldPathRemainingWork, fields.RemainingWork)
 	addFloatField(ops, operation, &fieldPathEffort, fields.Effort)
+
+	// New: Date fields
+	addDateField(ops, operation, &fieldPathStartDate, fields.StartDate)
+	addDateField(ops, operation, &fieldPathFinishDate, fields.FinishDate)
+	addDateField(ops, operation, &fieldPathTargetDate, fields.TargetDate)
+
+	// New: Planning fields
+	addOptionalIntField(ops, operation, &fieldPathBusinessValue, fields.BusinessValue)
+	addOptionalFloatField(ops, operation, &fieldPathStackRank, fields.StackRank)
+	addStringField(ops, operation, &fieldPathRisk, fields.Risk)
+
+	// New: Build fields
+	addStringField(ops, operation, &fieldPathFoundIn, fields.FoundIn)
+	addStringField(ops, operation, &fieldPathIntegrationBuild, fields.IntegrationBuild)
 }
 
 // buildUpdateOps converts UpdateOptions into a JSON patch operation slice.
@@ -462,13 +961,33 @@ func buildUpdateOps(opts UpdateOptions) []webapi.JsonPatchOperation {
 
 	var ops []webapi.JsonPatchOperation
 
+	// Update-specific fields
 	addStringField(&ops, &replace, &fieldPathTitle, opts.Title)
 	addStringField(&ops, &replace, &fieldPathState, opts.State)
 	addStringField(&ops, &replace, &fieldPathAcceptanceCriteria, opts.AcceptanceCriteria)
 	addStringField(&ops, &replace, &fieldPathReason, opts.Reason)
 	addStringField(&ops, &replace, &fieldPathTags, opts.Tags)
 
+	// Common fields
 	buildCommonOps(&ops, &replace, opts.CommonFields)
+
+	// Optional field groups
+	buildDateFieldOps(&ops, &replace, opts.DateFields)
+	buildStatusFieldOps(&ops, &replace, opts.StatusFields)
+	buildPlanningFieldOps(&ops, &replace, opts.PlanningFields)
+	buildBuildFieldOps(&ops, &replace, opts.BuildFields)
+	buildSalesforceFieldOps(&ops, &replace, opts.SalesforceFields)
+	buildRequirementFieldOps(&ops, &replace, opts.RequirementFields)
+	buildQualityFieldOps(&ops, &replace, opts.QualityFields)
+	buildMetricsFieldOps(&ops, &replace, opts.MetricsFields)
+	buildSecurityFieldOps(&ops, &replace, opts.SecurityFields)
+
+	// Type-specific fields
+	buildFeatureFieldOps(&ops, &replace, opts.FeatureFields)
+	buildBugFieldOps(&ops, &replace, opts.BugFields)
+	buildUserStoryFieldOps(&ops, &replace, opts.UserStoryFields)
+	buildTestCaseFieldOps(&ops, &replace, opts.TestCaseFields)
+	buildCodeReviewFieldOps(&ops, &replace, opts.CodeReviewFields)
 
 	return ops
 }
@@ -483,6 +1002,74 @@ func fieldFloat(f *map[string]any, key string) float64 {
 	n, _ := v.(float64)
 
 	return n
+}
+
+// fieldDateTime extracts a DateTime field from the work item fields map.
+// Returns nil if the field is not present or cannot be parsed.
+func fieldDateTime(f *map[string]any, key string) *time.Time {
+	val, ok := (*f)[key]
+	if !ok || val == nil {
+		return nil
+	}
+
+	str, ok := val.(string)
+	if !ok {
+		return nil
+	}
+
+	// Try multiple formats
+	formats := []string{
+		time.RFC3339,
+		time.RFC3339Nano,
+		"2006-01-02T15:04:05",
+		"2006-01-02",
+	}
+
+	for _, format := range formats {
+		if t, err := time.Parse(format, str); err == nil {
+			return &t
+		}
+	}
+
+	return nil
+}
+
+// fieldBoolPtr extracts a boolean field and returns a pointer to it.
+// Returns nil if the field is not present.
+func fieldBoolPtr(f *map[string]any, key string) *bool {
+	val, ok := (*f)[key]
+	if !ok || val == nil {
+		return nil
+	}
+
+	b, ok := val.(bool)
+	if !ok {
+		return nil
+	}
+
+	return &b
+}
+
+// fieldIntPtr extracts an int field and returns a pointer to it.
+// Returns nil if the field is not present or is zero.
+func fieldIntPtr(f *map[string]any, key string) *int {
+	i := fieldInt(f, key)
+	if i == 0 {
+		return nil
+	}
+
+	return &i
+}
+
+// fieldFloatPtr extracts a float field and returns a pointer to it.
+// Returns nil if the field is not present or is zero.
+func fieldFloatPtr(f *map[string]any, key string) *float64 {
+	fl := fieldFloat(f, key)
+	if fl == 0 {
+		return nil
+	}
+
+	return &fl
 }
 
 // extractParentID pulls the numeric ID from the System.Parent relation field.

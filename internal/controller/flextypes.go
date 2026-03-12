@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
+	"time"
 )
 
 var (
@@ -14,6 +16,12 @@ var (
 
 	// ErrInvalidWorkItemID is returned when a work item ID cannot be parsed.
 	ErrInvalidWorkItemID = errors.New("must be a valid work item ID or reference")
+
+	// ErrInvalidDateFormat is returned when a date string cannot be parsed.
+	ErrInvalidDateFormat = errors.New("invalid date format")
+
+	// ErrInvalidBooleanString is returned when a boolean string cannot be parsed.
+	ErrInvalidBooleanString = errors.New("invalid boolean string")
 
 	// workItemRefRegex matches Azure DevOps work item references like "AB#123".
 	workItemRefRegex = regexp.MustCompile(`^[A-Z]+#(\d+)$`)
@@ -156,4 +164,102 @@ func (f *FlexInt) UnmarshalJSON(data []byte) error {
 // MarshalJSON implements json.Marshaler for FlexInt.
 func (f FlexInt) MarshalJSON() ([]byte, error) {
 	return json.Marshal(int(f))
+}
+
+// FlexDateTime is a time.Time that can be unmarshaled from various date/time formats.
+type FlexDateTime time.Time
+
+// UnmarshalJSON implements json.Unmarshaler for FlexDateTime.
+func (f *FlexDateTime) UnmarshalJSON(data []byte) error {
+	var v any
+	if err := json.Unmarshal(data, &v); err != nil {
+		return err
+	}
+
+	switch val := v.(type) {
+	case string:
+		if val == "" {
+			*f = FlexDateTime(time.Time{})
+			return nil
+		}
+
+		// Try multiple formats
+		formats := []string{
+			time.RFC3339,          // "2006-01-02T15:04:05Z07:00"
+			time.RFC3339Nano,      // "2006-01-02T15:04:05.999999999Z07:00"
+			"2006-01-02T15:04:05", // Without timezone
+			"2006-01-02",          // Date only
+		}
+
+		for _, format := range formats {
+			if t, err := time.Parse(format, val); err == nil {
+				*f = FlexDateTime(t)
+				return nil
+			}
+		}
+
+		return fmt.Errorf("%w: %s (expected ISO8601 or YYYY-MM-DD)", ErrInvalidDateFormat, val)
+	case nil:
+		*f = FlexDateTime(time.Time{})
+	default:
+		return fmt.Errorf("%w: must be a date string, got %T", ErrInvalidType, v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements json.Marshaler for FlexDateTime.
+func (f FlexDateTime) MarshalJSON() ([]byte, error) {
+	t := time.Time(f)
+	if t.IsZero() {
+		return json.Marshal(nil)
+	}
+
+	return json.Marshal(t.Format(time.RFC3339))
+}
+
+// JSONSchemaExtend customizes the JSON Schema for FlexDateTime.
+func (*FlexDateTime) JSONSchemaExtend(schema *map[string]any) {
+	(*schema)["type"] = "string"
+	(*schema)["format"] = "date-time"
+	(*schema)["description"] = "ISO 8601 date-time or date (YYYY-MM-DD)"
+}
+
+// FlexBool is a bool that can be unmarshaled from various formats.
+type FlexBool bool
+
+// UnmarshalJSON implements json.Unmarshaler for FlexBool.
+func (f *FlexBool) UnmarshalJSON(data []byte) error {
+	var v any
+	if err := json.Unmarshal(data, &v); err != nil {
+		return err
+	}
+
+	switch val := v.(type) {
+	case bool:
+		*f = FlexBool(val)
+	case string:
+		lower := strings.ToLower(val)
+		switch lower {
+		case "true", "yes", "1":
+			*f = FlexBool(true)
+		case "false", "no", "0", "":
+			*f = FlexBool(false)
+		default:
+			return fmt.Errorf("%w: %s (expected true/false, yes/no, or 1/0)", ErrInvalidBooleanString, val)
+		}
+	case float64:
+		*f = FlexBool(val != 0)
+	case nil:
+		*f = FlexBool(false)
+	default:
+		return fmt.Errorf("%w: must be a boolean, got %T", ErrInvalidType, v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements json.Marshaler for FlexBool.
+func (f FlexBool) MarshalJSON() ([]byte, error) {
+	return json.Marshal(bool(f))
 }

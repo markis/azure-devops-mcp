@@ -272,7 +272,157 @@ func NewHandlers(client client.ADOClient, defaultProject string) *Handlers {
 ```go
 func fieldString(f *map[string]any, key string) string { ... }
 func fieldInt(f *map[string]any, key string) int { ... }
+func fieldDateTime(f *map[string]any, key string) *time.Time { ... }
+func fieldBoolPtr(f *map[string]any, key string) *bool { ... }
+func fieldIntPtr(f *map[string]any, key string) *int { ... }
+func fieldFloatPtr(f *map[string]any, key string) *float64 { ... }
 ```
+
+## Field Types and Field Groups
+
+### Flexible Input Types
+
+The controller layer uses flexible types to accept various input formats:
+
+**FlexDateTime** (`internal/controller/flextypes.go`):
+- Accepts: ISO 8601, RFC3339, RFC3339Nano, date-only (`2024-03-15`), empty string
+- Converts to: `*time.Time` (nil for zero/empty)
+- Example: `"2024-03-15T10:30:00Z"` or `"2024-03-15"`
+
+**FlexBool** (`internal/controller/flextypes.go`):
+- Accepts: `true/false`, `"yes"/"no"`, `"1"/"0"`, `1/0` (numbers), case-insensitive
+- Converts to: `*bool`
+- Example: `true`, `"yes"`, `1` all convert to `true`
+
+**FlexInt** and **FlexFloat** (existing):
+- Accept: numbers or string representations
+- Converts to: `int` or `float64`
+
+### Field Organization
+
+Fields are organized into reusable field group structs (`internal/client/fields.go`):
+
+**Date Fields** (9 fields):
+```go
+type DateFields struct {
+    StartDate, FinishDate, TargetDate, DueDate *time.Time
+    MarketDate, DevCompleteDate, QCStartDate, QCCompleteDate *time.Time
+    OriginalTargetDate *time.Time
+}
+```
+
+**Planning Fields** (6 fields):
+```go
+type PlanningFields struct {
+    BusinessValue   *int     // Business value score
+    StackRank       *float64 // CRITICAL for backlog ordering!
+    Risk            string
+    TimeCriticality *float64
+    Rating, Triage  string
+}
+```
+
+**Type-Specific Fields**:
+- `FeatureSpecificFields` - `AtRisk` (required for Feature), `DeliveryRisk`, `RiskReason`, `MitigationPlan`
+- `BugSpecificFields` - `SystemInfo`, `Blocked`, `ProposedFix`
+- `UserStorySpecificFields` - `DevOwner`, `Poker`
+- `TestCaseSpecificFields` - `Steps`, `AutomatedTestName`, `AutomationStatus`, etc.
+
+**Other Field Groups**:
+- `BuildFields` - `FoundIn`, `IntegrationBuild`, `ClosedInBuild`
+- `SalesforceFields` - Integration with Salesforce (7 fields)
+- `RequirementFields` - Requirements documentation (6 HTML fields)
+- `QualityFields` - Quality and review tracking (6 fields)
+- `MetricsFields` - Metrics and tracking (7 fields)
+- `SecurityFields` - Security tracking (`CVENumber`, `VulnerabilitySource`)
+- `StatusFields` - Status tracking (8 fields with dates)
+- `CodeReviewFields` - Code review fields (8 fields)
+
+### Field Group Pattern
+
+**Creating work items with field groups**:
+```go
+opts := client.CreateOptions{
+    CommonFields: client.CommonFields{
+        AssignedTo: "john@example.com",
+        StartDate:  convertFlexDateTime(in.StartDate),  // From CommonFields
+        // ...
+    },
+    DateFields: &client.DateFields{
+        DueDate:     convertFlexDateTime(in.DueDate),
+        MarketDate:  convertFlexDateTime(in.MarketDate),
+    },
+    FeatureFields: &client.FeatureSpecificFields{
+        AtRisk:         convertFlexBoolToPtr(in.AtRisk),
+        RiskReason:     in.RiskReason,
+        MitigationPlan: in.MitigationPlan,
+    },
+    Tags: in.Tags,
+}
+```
+
+**Field group builders** (`buildDateFieldOps`, `buildFeatureFieldOps`, etc.):
+```go
+func buildDateFieldOps(ops *[]webapi.JsonPatchOperation, operation *webapi.Operation, fields *DateFields) {
+    if fields == nil {
+        return
+    }
+    addDateField(ops, operation, &fieldPathDueDate, fields.DueDate)
+    // ... other date fields
+}
+```
+
+### Conversion Helpers
+
+**Controller → Client** (`internal/controller/helpers.go`):
+```go
+convertFlexDateTime(FlexDateTime) → *time.Time
+convertFlexBool(FlexBool) → bool
+convertFlexBoolToPtr(FlexBool) → *bool
+convertFlexIntToPtr(FlexInt) → *int
+convertFlexFloatToPtr(FlexFloat) → *float64
+```
+
+### Adding New Fields
+
+To add a new field:
+1. Add to appropriate `*Fields` struct in `internal/client/fields.go`
+2. Add field path constant in `internal/client/client.go`
+3. Add to `buildXxxFieldOps` function
+4. Add to input struct in `internal/controller/controller.go`
+5. Map in `registerCreateWorkItem` / `registerUpdateWorkItem`
+6. Add extraction in `toWorkItem` if needed for responses
+7. Add tests
+
+## Type-Specific Schemas with oneOf
+
+### Overview
+The `create_work_item` tool uses discriminated union schemas (oneOf) to provide type-specific field visibility. When creating a Bug, only Bug-relevant fields are shown; when creating a Feature, only Feature-relevant fields are shown.
+
+### Schema Structure
+- **Bug schema** - Common fields + SystemInfo, Blocked, ProposedFix
+- **Feature schema** - Common fields + AtRisk (required), Documentation (required), DeliveryRisk, RiskReason, MitigationPlan
+- **User Story schema** - Common fields + DevOwner, Poker
+- **Task schema** - Common fields (emphasis on OriginalEstimate, CompletedWork, RemainingWork)
+- **Other schema** - All fields (fallback for Epic, Test Case, Issue, etc.)
+
+### Implementation
+Located in `internal/controller/controller.go`:
+- Type-specific input structs: `createBugInput`, `createFeatureInput`, `createUserStoryInput`, `createTaskInput`, `createOtherInput`
+- Schema generation: `buildCreateWorkItemSchema()` uses `jsonschema.For[T]()` to generate schemas from structs
+- Tool registration: `registerCreateWorkItem()` uses `InputSchema` to override automatic schema generation
+
+### Type Discriminator
+Each schema enforces a `const` constraint on the `type` field programmatically:
+- Bug: `type.Const = "Bug"`
+- Feature: `type.Const = "Feature"`  
+- User Story: `type.Const = "User Story"`
+- Task: `type.Const = "Task"`
+- Other: No const (accepts any type value)
+
+### Testing
+- Unit tests: `internal/controller/schema_test.go` verifies oneOf structure and field presence
+- Integration tests: Automated tests verify schema generation without panic
 
 ## Linter Configuration
 

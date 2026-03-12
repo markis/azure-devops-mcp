@@ -2,9 +2,15 @@ package client
 
 import (
 	"testing"
+	"time"
 
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/webapi"
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/workitemtracking"
+)
+
+var (
+	testPathStartDate = "/fields/Microsoft.VSTS.Scheduling.StartDate"
+	testPathAtRisk    = "/fields/Custom.AtRisk"
 )
 
 func TestFieldString_ValidValue(t *testing.T) {
@@ -511,5 +517,178 @@ func TestAddIntField_ZeroValue(t *testing.T) {
 
 	if len(ops) != 0 {
 		t.Errorf("expected 0 operations for zero value, got %d", len(ops))
+	}
+}
+
+func TestAddDateField_WithValue(t *testing.T) {
+	add := webapi.OperationValues.Add
+	ops := []webapi.JsonPatchOperation{}
+
+	date := time.Date(2024, 3, 15, 10, 30, 0, 0, time.UTC)
+	addDateField(&ops, &add, &testPathStartDate, &date)
+
+	if len(ops) != 1 {
+		t.Fatalf("expected 1 operation, got %d", len(ops))
+	}
+
+	if *ops[0].Op != add {
+		t.Error("operation type should be Add")
+	}
+
+	if *ops[0].Path != testPathStartDate {
+		t.Errorf("expected path %s, got %s", testPathStartDate, *ops[0].Path)
+	}
+
+	expectedValue := "2024-03-15T10:30:00Z"
+	if ops[0].Value != expectedValue {
+		t.Errorf("expected value %s, got %v", expectedValue, ops[0].Value)
+	}
+}
+
+func TestAddDateField_NilValue(t *testing.T) {
+	add := webapi.OperationValues.Add
+	ops := []webapi.JsonPatchOperation{}
+
+	addDateField(&ops, &add, &testPathStartDate, nil)
+
+	if len(ops) != 0 {
+		t.Errorf("expected 0 operations for nil value, got %d", len(ops))
+	}
+}
+
+func TestAddDateField_ZeroTime(t *testing.T) {
+	add := webapi.OperationValues.Add
+	ops := []webapi.JsonPatchOperation{}
+
+	zeroTime := time.Time{}
+	addDateField(&ops, &add, &testPathStartDate, &zeroTime)
+
+	if len(ops) != 0 {
+		t.Errorf("expected 0 operations for zero time, got %d", len(ops))
+	}
+}
+
+func TestAddBoolField_True(t *testing.T) {
+	add := webapi.OperationValues.Add
+	ops := []webapi.JsonPatchOperation{}
+
+	value := true
+	addBoolField(&ops, &add, &testPathAtRisk, &value)
+
+	if len(ops) != 1 {
+		t.Fatalf("expected 1 operation, got %d", len(ops))
+	}
+
+	if *ops[0].Op != add {
+		t.Error("operation type should be Add")
+	}
+
+	if *ops[0].Path != testPathAtRisk {
+		t.Errorf("expected path %s, got %s", testPathAtRisk, *ops[0].Path)
+	}
+
+	if ops[0].Value != true {
+		t.Errorf("expected value true, got %v", ops[0].Value)
+	}
+}
+
+func TestAddBoolField_False(t *testing.T) {
+	add := webapi.OperationValues.Add
+	ops := []webapi.JsonPatchOperation{}
+
+	value := false
+	addBoolField(&ops, &add, &testPathAtRisk, &value)
+
+	if len(ops) != 1 {
+		t.Fatalf("expected 1 operation, got %d", len(ops))
+	}
+
+	if ops[0].Value != false {
+		t.Errorf("expected value false, got %v", ops[0].Value)
+	}
+}
+
+func TestAddBoolField_NilValue(t *testing.T) {
+	add := webapi.OperationValues.Add
+	ops := []webapi.JsonPatchOperation{}
+
+	addBoolField(&ops, &add, &testPathAtRisk, nil)
+
+	if len(ops) != 0 {
+		t.Errorf("expected 0 operations for nil value, got %d", len(ops))
+	}
+}
+
+func TestAddOptionalIntField_WithValue(t *testing.T) {
+	add := webapi.OperationValues.Add
+	pathBusinessValue := "/fields/Microsoft.VSTS.Common.BusinessValue"
+	ops := []webapi.JsonPatchOperation{}
+
+	value := 100
+	addOptionalIntField(&ops, &add, &pathBusinessValue, &value)
+
+	if len(ops) != 1 {
+		t.Fatalf("expected 1 operation, got %d", len(ops))
+	}
+
+	if *ops[0].Op != add {
+		t.Error("operation type should be Add")
+	}
+
+	if *ops[0].Path != pathBusinessValue {
+		t.Errorf("expected path %s, got %s", pathBusinessValue, *ops[0].Path)
+	}
+
+	if ops[0].Value != 100 {
+		t.Errorf("expected value 100, got %v", ops[0].Value)
+	}
+}
+
+func TestAddOptionalIntField_NilValue(t *testing.T) {
+	add := webapi.OperationValues.Add
+	pathBusinessValue := "/fields/Microsoft.VSTS.Common.BusinessValue"
+	ops := []webapi.JsonPatchOperation{}
+
+	addOptionalIntField(&ops, &add, &pathBusinessValue, nil)
+
+	if len(ops) != 0 {
+		t.Errorf("expected 0 operations for nil value, got %d", len(ops))
+	}
+}
+
+func TestAddOptionalFloatField_WithValue(t *testing.T) {
+	add := webapi.OperationValues.Add
+	pathStackRank := "/fields/Microsoft.VSTS.Common.StackRank"
+	ops := []webapi.JsonPatchOperation{}
+
+	value := 1000.5
+	addOptionalFloatField(&ops, &add, &pathStackRank, &value)
+
+	if len(ops) != 1 {
+		t.Fatalf("expected 1 operation, got %d", len(ops))
+	}
+
+	if *ops[0].Op != add {
+		t.Error("operation type should be Add")
+	}
+
+	if *ops[0].Path != pathStackRank {
+		t.Errorf("expected path %s, got %s", pathStackRank, *ops[0].Path)
+	}
+
+	if ops[0].Value != 1000.5 {
+		t.Errorf("expected value 1000.5, got %v", ops[0].Value)
+	}
+}
+
+func TestAddOptionalFloatField_NilValue(t *testing.T) {
+	add := webapi.OperationValues.Add
+	pathStackRank := "/fields/Microsoft.VSTS.Common.StackRank"
+	ops := []webapi.JsonPatchOperation{}
+
+	addOptionalFloatField(&ops, &add, &pathStackRank, nil)
+
+	if len(ops) != 0 {
+		t.Errorf("expected 0 operations for nil value, got %d", len(ops))
 	}
 }
