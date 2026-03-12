@@ -25,7 +25,8 @@ var htmlToMD = md.NewConverter("", true, mdOpts)
 var ErrNoFieldsToUpdate = errors.New(
 	"no fields to update: provide at least one of title, state, assigned_to, " +
 		"description, acceptance_criteria, story_points, original_estimate, " +
-		"completed_work, remaining_work, size, severity, or reason",
+		"completed_work, remaining_work, size, severity, reason, tags, priority, " +
+		"iteration_path, area_path, effort, activity, or value_area",
 )
 
 // Field path constants for Azure DevOps work item fields.
@@ -36,13 +37,19 @@ var (
 	fieldPathDescription        = "/fields/System.Description"
 	fieldPathAssignedTo         = "/fields/System.AssignedTo"
 	fieldPathTags               = "/fields/System.Tags"
+	fieldPathIterationPath      = "/fields/System.IterationPath"
+	fieldPathAreaPath           = "/fields/System.AreaPath"
 	fieldPathAcceptanceCriteria = "/fields/Microsoft.VSTS.Common.AcceptanceCriteria"
+	fieldPathPriority           = "/fields/Microsoft.VSTS.Common.Priority"
+	fieldPathSeverity           = "/fields/Microsoft.VSTS.Common.Severity"
+	fieldPathActivity           = "/fields/Microsoft.VSTS.Common.Activity"
+	fieldPathValueArea          = "/fields/Microsoft.VSTS.Common.ValueArea"
 	fieldPathStoryPoints        = "/fields/Microsoft.VSTS.Scheduling.StoryPoints"
 	fieldPathOriginalEstimate   = "/fields/Microsoft.VSTS.Scheduling.OriginalEstimate"
-	fieldPathSize               = "/fields/Custom.Teeshirtsizing"
-	fieldPathSeverity           = "/fields/Microsoft.VSTS.Common.Severity"
 	fieldPathCompletedWork      = "/fields/Microsoft.VSTS.Scheduling.CompletedWork"
 	fieldPathRemainingWork      = "/fields/Microsoft.VSTS.Scheduling.RemainingWork"
+	fieldPathEffort             = "/fields/Microsoft.VSTS.Scheduling.Effort"
+	fieldPathSize               = "/fields/Custom.Teeshirtsizing"
 	fieldPathReason             = "/fields/System.Reason"
 )
 
@@ -74,8 +81,11 @@ type WorkItem struct {
 	OriginalEstimate   float64 `json:"original_estimate,omitempty"   jsonschema:"Time estimate in hours"`
 	CompletedWork      float64 `json:"completed_work,omitempty"      jsonschema:"Completed work in hours"`
 	RemainingWork      float64 `json:"remaining_work,omitempty"      jsonschema:"Remaining work in hours"`
+	Effort             float64 `json:"effort,omitempty"              jsonschema:"Effort in hours"`
 	Size               string  `json:"size,omitempty"                jsonschema:"T-shirt size estimate"`
 	Severity           string  `json:"severity,omitempty"            jsonschema:"Severity (Critical/High/Medium/Low)"`
+	Activity           string  `json:"activity,omitempty"            jsonschema:"Activity type (Development/Testing/etc)"`
+	ValueArea          string  `json:"value_area,omitempty"          jsonschema:"Value area (Business/Architectural)"`
 	Reason             string  `json:"reason,omitempty"              jsonschema:"Reason for current state"`
 	URL                string  `json:"url"                           jsonschema:"Work item URL"`
 }
@@ -84,12 +94,18 @@ type WorkItem struct {
 type CommonFields struct {
 	AssignedTo       string
 	Description      string
+	IterationPath    string
+	AreaPath         string
+	Priority         int
 	StoryPoints      float64
 	OriginalEstimate float64
 	CompletedWork    float64
 	RemainingWork    float64
+	Effort           float64
 	Size             string
 	Severity         string
+	Activity         string
+	ValueArea        string
 }
 
 // CreateOptions holds optional fields for creating a work item.
@@ -108,6 +124,7 @@ type UpdateOptions struct {
 	State              string
 	AcceptanceCriteria string
 	Reason             string
+	Tags               string
 }
 
 // ADOClient is the interface tool handlers depend on.
@@ -154,11 +171,14 @@ func (c *Client) GetWorkItem(ctx context.Context, project string, id int) (*Work
 		"Microsoft.VSTS.Common.AcceptanceCriteria",
 		"Microsoft.VSTS.Common.Priority",
 		"Microsoft.VSTS.Common.Severity",
+		"Microsoft.VSTS.Common.Activity",
+		"Microsoft.VSTS.Common.ValueArea",
 		"Custom.Teeshirtsizing",
 		"Microsoft.VSTS.Scheduling.StoryPoints",
 		"Microsoft.VSTS.Scheduling.OriginalEstimate",
 		"Microsoft.VSTS.Scheduling.CompletedWork",
 		"Microsoft.VSTS.Scheduling.RemainingWork",
+		"Microsoft.VSTS.Scheduling.Effort",
 		"Microsoft.VSTS.TCM.ReproSteps",
 	}
 
@@ -205,6 +225,13 @@ func addStringField(ops *[]webapi.JsonPatchOperation, op *webapi.Operation, path
 
 // addFloatField appends a float field operation if the value is non-zero.
 func addFloatField(ops *[]webapi.JsonPatchOperation, op *webapi.Operation, path *string, value float64) {
+	if value != 0 {
+		*ops = append(*ops, webapi.JsonPatchOperation{Op: op, Path: path, Value: value})
+	}
+}
+
+// addIntField appends an int field operation if the value is non-zero.
+func addIntField(ops *[]webapi.JsonPatchOperation, op *webapi.Operation, path *string, value int) {
 	if value != 0 {
 		*ops = append(*ops, webapi.JsonPatchOperation{Op: op, Path: path, Value: value})
 	}
@@ -336,8 +363,11 @@ func toWorkItem(item *workitemtracking.WorkItem) *WorkItem {
 		OriginalEstimate:   fieldFloat(f, "Microsoft.VSTS.Scheduling.OriginalEstimate"),
 		CompletedWork:      fieldFloat(f, "Microsoft.VSTS.Scheduling.CompletedWork"),
 		RemainingWork:      fieldFloat(f, "Microsoft.VSTS.Scheduling.RemainingWork"),
+		Effort:             fieldFloat(f, "Microsoft.VSTS.Scheduling.Effort"),
 		Size:               fieldString(f, "Custom.Teeshirtsizing"),
 		Severity:           fieldString(f, "Microsoft.VSTS.Common.Severity"),
+		Activity:           fieldString(f, "Microsoft.VSTS.Common.Activity"),
+		ValueArea:          fieldString(f, "Microsoft.VSTS.Common.ValueArea"),
 		Reason:             fieldString(f, "System.Reason"),
 	}
 	if item.Id != nil {
@@ -410,13 +440,20 @@ func fieldInt(f *map[string]any, key string) int {
 func buildCommonOps(ops *[]webapi.JsonPatchOperation, operation *webapi.Operation, fields CommonFields) {
 	addStringField(ops, operation, &fieldPathAssignedTo, fields.AssignedTo)
 	addStringField(ops, operation, &fieldPathDescription, fields.Description)
+	addStringField(ops, operation, &fieldPathIterationPath, fields.IterationPath)
+	addStringField(ops, operation, &fieldPathAreaPath, fields.AreaPath)
 	addStringField(ops, operation, &fieldPathSize, fields.Size)
 	addStringField(ops, operation, &fieldPathSeverity, fields.Severity)
+	addStringField(ops, operation, &fieldPathActivity, fields.Activity)
+	addStringField(ops, operation, &fieldPathValueArea, fields.ValueArea)
+
+	addIntField(ops, operation, &fieldPathPriority, fields.Priority)
 
 	addFloatField(ops, operation, &fieldPathStoryPoints, fields.StoryPoints)
 	addFloatField(ops, operation, &fieldPathOriginalEstimate, fields.OriginalEstimate)
 	addFloatField(ops, operation, &fieldPathCompletedWork, fields.CompletedWork)
 	addFloatField(ops, operation, &fieldPathRemainingWork, fields.RemainingWork)
+	addFloatField(ops, operation, &fieldPathEffort, fields.Effort)
 }
 
 // buildUpdateOps converts UpdateOptions into a JSON patch operation slice.
@@ -429,6 +466,7 @@ func buildUpdateOps(opts UpdateOptions) []webapi.JsonPatchOperation {
 	addStringField(&ops, &replace, &fieldPathState, opts.State)
 	addStringField(&ops, &replace, &fieldPathAcceptanceCriteria, opts.AcceptanceCriteria)
 	addStringField(&ops, &replace, &fieldPathReason, opts.Reason)
+	addStringField(&ops, &replace, &fieldPathTags, opts.Tags)
 
 	buildCommonOps(&ops, &replace, opts.CommonFields)
 

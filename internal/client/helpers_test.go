@@ -475,3 +475,41 @@ func TestAddFloatField_MultipleFields(t *testing.T) {
 		t.Errorf("expected second value 1.5, got %v", ops[1].Value)
 	}
 }
+
+func TestAddIntField_WithNonZeroValue(t *testing.T) {
+	add := webapi.OperationValues.Add
+	pathPriority := "/fields/Microsoft.VSTS.Common.Priority"
+
+	var ops []webapi.JsonPatchOperation
+
+	addIntField(&ops, &add, &pathPriority, 2)
+
+	if len(ops) != 1 {
+		t.Fatalf("expected 1 operation, got %d", len(ops))
+	}
+
+	if *ops[0].Op != add {
+		t.Errorf("expected Add operation, got %v", *ops[0].Op)
+	}
+
+	if *ops[0].Path != pathPriority {
+		t.Errorf("expected path %s, got %s", pathPriority, *ops[0].Path)
+	}
+
+	if ops[0].Value != 2 {
+		t.Errorf("expected value 2, got %v", ops[0].Value)
+	}
+}
+
+func TestAddIntField_ZeroValue(t *testing.T) {
+	add := webapi.OperationValues.Add
+	pathPriority := "/fields/Microsoft.VSTS.Common.Priority"
+
+	var ops []webapi.JsonPatchOperation
+
+	addIntField(&ops, &add, &pathPriority, 0)
+
+	if len(ops) != 0 {
+		t.Errorf("expected 0 operations for zero value, got %d", len(ops))
+	}
+}

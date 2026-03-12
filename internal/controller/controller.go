@@ -179,12 +179,18 @@ type createWorkItemInput struct {
 	Description      string    `json:"description,omitempty"       jsonschema:"detailed description in plain text or HTML"`
 	AssignedTo       string    `json:"assigned_to,omitempty"       jsonschema:"email or display name to assign to"`
 	Tags             string    `json:"tags,omitempty"              jsonschema:"semicolon-separated tags"`
+	IterationPath    string    `json:"iteration_path,omitempty"    jsonschema:"iteration/sprint path"`
+	AreaPath         string    `json:"area_path,omitempty"         jsonschema:"area path in the project"`
+	Priority         FlexInt   `json:"priority,omitempty"          jsonschema:"priority level (1-4)"`
 	StoryPoints      FlexFloat `json:"story_points,omitempty"      jsonschema:"story points estimate (for User Stories)"`
 	OriginalEstimate FlexFloat `json:"original_estimate,omitempty" jsonschema:"time estimate in hours (for Tasks)"`
 	CompletedWork    FlexFloat `json:"completed_work,omitempty"    jsonschema:"completed work in hours (for Tasks)"`
 	RemainingWork    FlexFloat `json:"remaining_work,omitempty"    jsonschema:"remaining work in hours (for Tasks)"`
+	Effort           FlexFloat `json:"effort,omitempty"            jsonschema:"effort in hours"`
 	Size             string    `json:"size,omitempty"              jsonschema:"t-shirt size (S, M, L, XL)"`
 	Severity         string    `json:"severity,omitempty"          jsonschema:"severity for Bug/Vulnerability"`
+	Activity         string    `json:"activity,omitempty"          jsonschema:"activity type (Development/Testing/etc)"`
+	ValueArea        string    `json:"value_area,omitempty"        jsonschema:"value area (Business/Architectural)"`
 	Project          string    `json:"project,omitempty"           jsonschema:"project name (optional)"`
 }
 
@@ -211,12 +217,18 @@ func registerCreateWorkItem(srv *mcp.Server, h *tools.Handlers) {
 			CommonFields: client.CommonFields{
 				AssignedTo:       in.AssignedTo,
 				Description:      in.Description,
+				IterationPath:    in.IterationPath,
+				AreaPath:         in.AreaPath,
+				Priority:         int(in.Priority),
 				StoryPoints:      float64(in.StoryPoints),
 				OriginalEstimate: float64(in.OriginalEstimate),
 				CompletedWork:    float64(in.CompletedWork),
 				RemainingWork:    float64(in.RemainingWork),
+				Effort:           float64(in.Effort),
 				Size:             in.Size,
 				Severity:         in.Severity,
+				Activity:         in.Activity,
+				ValueArea:        in.ValueArea,
 			},
 			Tags: in.Tags,
 		}
@@ -245,12 +257,19 @@ type updateWorkItemInput struct {
 	AssignedTo         string    `json:"assigned_to,omitempty"         jsonschema:"email or display name to reassign to"`
 	Description        string    `json:"description,omitempty"         jsonschema:"new description in plain text or HTML"`
 	AcceptanceCriteria string    `json:"acceptance_criteria,omitempty" jsonschema:"acceptance criteria for work item"`
+	Tags               string    `json:"tags,omitempty"                jsonschema:"semicolon-separated tags"`
+	IterationPath      string    `json:"iteration_path,omitempty"      jsonschema:"iteration/sprint path"`
+	AreaPath           string    `json:"area_path,omitempty"           jsonschema:"area path in the project"`
+	Priority           FlexInt   `json:"priority,omitempty"            jsonschema:"priority level (1-4)"`
 	StoryPoints        FlexFloat `json:"story_points,omitempty"        jsonschema:"story points estimate"`
 	OriginalEstimate   FlexFloat `json:"original_estimate,omitempty"   jsonschema:"time estimate in hours"`
 	CompletedWork      FlexFloat `json:"completed_work,omitempty"      jsonschema:"new completed work in hours"`
 	RemainingWork      FlexFloat `json:"remaining_work,omitempty"      jsonschema:"new remaining work in hours"`
+	Effort             FlexFloat `json:"effort,omitempty"              jsonschema:"effort in hours"`
 	Size               string    `json:"size,omitempty"                jsonschema:"t-shirt size (S, M, L, XL)"`
 	Severity           string    `json:"severity,omitempty"            jsonschema:"new severity level"`
+	Activity           string    `json:"activity,omitempty"            jsonschema:"activity type"`
+	ValueArea          string    `json:"value_area,omitempty"          jsonschema:"value area (Business/Architectural)"`
 	Reason             string    `json:"reason,omitempty"              jsonschema:"reason for state change"`
 	Project            string    `json:"project,omitempty"             jsonschema:"project name (optional)"`
 }
@@ -280,17 +299,24 @@ func registerUpdateWorkItem(srv *mcp.Server, h *tools.Handlers) {
 			CommonFields: client.CommonFields{
 				AssignedTo:       in.AssignedTo,
 				Description:      in.Description,
+				IterationPath:    in.IterationPath,
+				AreaPath:         in.AreaPath,
+				Priority:         int(in.Priority),
 				StoryPoints:      storyPoints,
 				OriginalEstimate: originalEstimate,
 				CompletedWork:    float64(in.CompletedWork),
 				RemainingWork:    float64(in.RemainingWork),
+				Effort:           float64(in.Effort),
 				Size:             in.Size,
 				Severity:         in.Severity,
+				Activity:         in.Activity,
+				ValueArea:        in.ValueArea,
 			},
 			Title:              in.Title,
 			State:              in.State,
 			AcceptanceCriteria: in.AcceptanceCriteria,
 			Reason:             in.Reason,
+			Tags:               in.Tags,
 		}
 
 		workItem, text, err := h.UpdateWorkItem(ctx, id, opts, in.Project)

@@ -132,3 +132,28 @@ func (f *FlexFloat) UnmarshalJSON(data []byte) error {
 func (f FlexFloat) MarshalJSON() ([]byte, error) {
 	return json.Marshal(float64(f))
 }
+
+// FlexInt is an int that can be unmarshaled from either a number or string.
+type FlexInt int
+
+// UnmarshalJSON implements json.Unmarshaler for FlexInt.
+func (f *FlexInt) UnmarshalJSON(data []byte) error {
+	var v any
+	if err := json.Unmarshal(data, &v); err != nil {
+		return err
+	}
+
+	i, err := parseIntFromAny(v)
+	if err != nil {
+		return err
+	}
+
+	*f = FlexInt(i)
+
+	return nil
+}
+
+// MarshalJSON implements json.Marshaler for FlexInt.
+func (f FlexInt) MarshalJSON() ([]byte, error) {
+	return json.Marshal(int(f))
+}

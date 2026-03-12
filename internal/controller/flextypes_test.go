@@ -149,3 +149,78 @@ func TestFlexFloat_UnmarshalJSON_EmptyString(t *testing.T) {
 		t.Errorf("expected 0, got %f", f)
 	}
 }
+
+func TestFlexInt_UnmarshalJSON_Number(t *testing.T) {
+	var i controller.FlexInt
+
+	err := json.Unmarshal([]byte(`42`), &i)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if int(i) != 42 {
+		t.Errorf("expected 42, got %d", i)
+	}
+}
+
+func TestFlexInt_UnmarshalJSON_Float64(t *testing.T) {
+	var i controller.FlexInt
+
+	err := json.Unmarshal([]byte(`3.0`), &i)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if int(i) != 3 {
+		t.Errorf("expected 3, got %d", i)
+	}
+}
+
+func TestFlexInt_UnmarshalJSON_String(t *testing.T) {
+	var i controller.FlexInt
+
+	err := json.Unmarshal([]byte(`"99"`), &i)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if int(i) != 99 {
+		t.Errorf("expected 99, got %d", i)
+	}
+}
+
+func TestFlexInt_UnmarshalJSON_Null(t *testing.T) {
+	var i controller.FlexInt
+
+	err := json.Unmarshal([]byte(`null`), &i)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if int(i) != 0 {
+		t.Errorf("expected 0, got %d", i)
+	}
+}
+
+func TestFlexInt_UnmarshalJSON_InvalidString(t *testing.T) {
+	var i controller.FlexInt
+
+	err := json.Unmarshal([]byte(`"not a number"`), &i)
+	if err == nil {
+		t.Error("expected error for invalid string, got nil")
+	}
+}
+
+func TestFlexInt_MarshalJSON(t *testing.T) {
+	i := controller.FlexInt(123)
+
+	data, err := json.Marshal(i)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	expected := `123`
+	if string(data) != expected {
+		t.Errorf("expected %s, got %s", expected, string(data))
+	}
+}
