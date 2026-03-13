@@ -17,7 +17,10 @@ MCP (Model Context Protocol) server for Azure DevOps work item management. Allow
 - ✅ Update existing work items
 - ✅ Add comments to work items
 - ✅ Full field support (severity, time tracking, story points, acceptance criteria, area/iteration paths, etc.)
-- ✅ HTML to Markdown conversion for descriptions
+- ✅ Bidirectional Markdown ↔ HTML conversion for all rich text fields
+  - Reads: HTML → Markdown (token-efficient)
+  - Writes: Markdown → HTML (developer-friendly)
+  - Automatic HTML sanitization for security
 
 ## Installation
 
@@ -291,6 +294,57 @@ Add to your OpenCode MCP configuration:
 - `create_work_item` - Create a new work item
 - `update_work_item` - Update an existing work item
 - `add_comment` - Add a comment to a work item
+
+## Using Markdown in Work Items
+
+All rich text fields (descriptions, acceptance criteria, comments, etc.) support **Markdown input**. The server automatically converts Markdown to HTML before sending to Azure DevOps.
+
+### Supported Markdown
+
+- GitHub Flavored Markdown (GFM)
+- Headers, bold, italic, lists
+- Code blocks (inline and fenced)
+- Tables
+- Links and images
+- Raw HTML (sanitized for security)
+
+### Example
+
+```python
+# Create work item with Markdown
+ado_create_work_item(
+    type="Bug",
+    title="Authentication Issue",
+    description="""
+## Problem
+
+Users cannot log in when using **special characters** in password.
+
+### Steps to Reproduce
+
+1. Enter username
+2. Enter password with `<` or `>` characters
+3. Click Login
+
+### Expected
+
+Login succeeds
+
+### Actual
+
+Error: "Invalid credentials"
+    """,
+    acceptance_criteria="""
+- [ ] Support special characters in passwords
+- [ ] Validate input properly
+- [ ] Show clear error messages
+    """
+)
+```
+
+### Security
+
+All HTML output is sanitized using bluemonday's UGC policy to prevent XSS attacks. Dangerous tags (`<script>`, `<iframe>`) and attributes (`onclick`, `javascript:` URLs) are automatically removed.
 
 ## Development
 

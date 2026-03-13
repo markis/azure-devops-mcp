@@ -1,7 +1,10 @@
 package controller
 
 import (
+	"slices"
 	"testing"
+
+	"github.com/google/jsonschema-go/jsonschema"
 )
 
 func TestBuildCreateWorkItemSchema(t *testing.T) {
@@ -19,39 +22,49 @@ func TestBuildCreateWorkItemSchema(t *testing.T) {
 	expectedTypes := []string{"Bug", "Feature", "User Story", "Task", ""}
 
 	for i, subSchema := range schema.OneOf {
-		if subSchema.Properties == nil {
-			t.Errorf("schema %d: expected properties, got nil", i)
-			continue
-		}
+		verifySchemaStructure(t, i, subSchema, expectedTypes)
+	}
+}
 
-		typeSchema, ok := subSchema.Properties["type"]
-		if !ok {
-			t.Errorf("schema %d: missing 'type' property", i)
-			continue
-		}
+// verifySchemaStructure checks that a schema has proper structure and required fields.
+func verifySchemaStructure(t *testing.T, index int, subSchema *jsonschema.Schema, expectedTypes []string) {
+	t.Helper()
 
-		// Check const value (empty string for "Other" schema)
-		if i < 4 {
-			if typeSchema.Const == nil {
-				t.Errorf("schema %d: expected const=%q, got nil", i, expectedTypes[i])
-			} else if constVal, ok := (*typeSchema.Const).(string); !ok || constVal != expectedTypes[i] {
-				t.Errorf("schema %d: expected const=%q, got %v", i, expectedTypes[i], *typeSchema.Const)
-			}
-		}
+	if subSchema.Properties == nil {
+		t.Errorf("schema %d: expected properties, got nil", index)
+		return
+	}
 
-		// Verify title is required in all schemas
-		foundTitle := false
+	verifyTypeProperty(t, index, subSchema, expectedTypes)
+	verifyTitleRequired(t, index, subSchema)
+}
 
-		for _, req := range subSchema.Required {
-			if req == "title" {
-				foundTitle = true
-				break
-			}
-		}
+// verifyTypeProperty checks that the type property has the correct const value.
+func verifyTypeProperty(t *testing.T, index int, subSchema *jsonschema.Schema, expectedTypes []string) {
+	t.Helper()
 
-		if !foundTitle {
-			t.Errorf("schema %d: 'title' should be required", i)
+	typeSchema, ok := subSchema.Properties["type"]
+	if !ok {
+		t.Errorf("schema %d: missing 'type' property", index)
+		return
+	}
+
+	// Check const value (empty string for "Other" schema)
+	if index < 4 {
+		if typeSchema.Const == nil {
+			t.Errorf("schema %d: expected const=%q, got nil", index, expectedTypes[index])
+		} else if constVal, ok := (*typeSchema.Const).(string); !ok || constVal != expectedTypes[index] {
+			t.Errorf("schema %d: expected const=%q, got %v", index, expectedTypes[index], *typeSchema.Const)
 		}
+	}
+}
+
+// verifyTitleRequired checks that title is in the required fields list.
+func verifyTitleRequired(t *testing.T, index int, subSchema *jsonschema.Schema) {
+	t.Helper()
+
+	if !slices.Contains(subSchema.Required, "title") {
+		t.Errorf("schema %d: 'title' should be required", index)
 	}
 }
 

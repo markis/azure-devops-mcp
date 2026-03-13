@@ -3,15 +3,22 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
+	"github.com/microcosm-cc/bluemonday"
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7"
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/webapi"
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/workitemtracking"
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/extension"
+	"github.com/yuin/goldmark/parser"
+	"github.com/yuin/goldmark/renderer/html"
 )
 
 var mdOpts = &md.Options{
@@ -21,6 +28,24 @@ var mdOpts = &md.Options{
 // htmlToMD converts HTML strings returned by the ADO API to Markdown.
 // Created once at package init; safe for concurrent use.
 var htmlToMD = md.NewConverter("", true, mdOpts)
+
+// mdConverter converts Markdown to HTML using GitHub Flavored Markdown.
+// Created once at package init; safe for concurrent use.
+var mdConverter = goldmark.New(
+	goldmark.WithExtensions(extension.GFM),
+	goldmark.WithParserOptions(
+		parser.WithAutoHeadingID(),
+	),
+	goldmark.WithRendererOptions(
+		html.WithHardWraps(),
+		html.WithXHTML(),
+		html.WithUnsafe(), // Allow raw HTML (will be sanitized)
+	),
+)
+
+// htmlSanitizer strips dangerous HTML tags and attributes.
+// Created once at package init; safe for concurrent use.
+var htmlSanitizer = bluemonday.UGCPolicy()
 
 // ErrNoFieldsToUpdate is returned when UpdateWorkItem is called with no fields set.
 var ErrNoFieldsToUpdate = errors.New(
@@ -422,6 +447,13 @@ func addStringField(ops *[]webapi.JsonPatchOperation, op *webapi.Operation, path
 	}
 }
 
+// addHTMLField appends an HTML field operation after converting Markdown to HTML and sanitizing.
+// If the value is empty, no operation is added.
+func addHTMLField(ops *[]webapi.JsonPatchOperation, op *webapi.Operation, path *string, value string) {
+	prepared := prepareHTMLField(value)
+	addStringField(ops, op, path, prepared)
+}
+
 // addFloatField appends a float field operation if the value is non-zero.
 func addFloatField(ops *[]webapi.JsonPatchOperation, op *webapi.Operation, path *string, value float64) {
 	if value != 0 {
@@ -539,8 +571,9 @@ func (c *Client) UpdateWorkItem(
 
 // AddComment posts a comment on a work item.
 func (c *Client) AddComment(ctx context.Context, project string, id int, text string) error {
+	prepared := prepareHTMLField(text)
 	_, err := c.wit.AddComment(ctx, workitemtracking.AddCommentArgs{
-		Request:    &workitemtracking.CommentCreate{Text: &text},
+		Request:    &workitemtracking.CommentCreate{Text: &prepared},
 		Project:    &project,
 		WorkItemId: &id,
 	})
@@ -801,12 +834,12 @@ func buildRequirementFieldOps(
 		return
 	}
 
-	addStringField(ops, operation, &fieldPathFunctionalRequirements, fields.FunctionalRequirements)
-	addStringField(ops, operation, &fieldPathNonfunctionalRequirements, fields.NonfunctionalRequirements)
-	addStringField(ops, operation, &fieldPathBusinessCase, fields.BusinessCase)
-	addStringField(ops, operation, &fieldPathSuggestedTests, fields.SuggestedTests)
-	addStringField(ops, operation, &fieldPathRejectedIdeas, fields.RejectedIdeas)
-	addStringField(ops, operation, &fieldPathResources, fields.Resources)
+	addHTMLField(ops, operation, &fieldPathFunctionalRequirements, fields.FunctionalRequirements)
+	addHTMLField(ops, operation, &fieldPathNonfunctionalRequirements, fields.NonfunctionalRequirements)
+	addHTMLField(ops, operation, &fieldPathBusinessCase, fields.BusinessCase)
+	addHTMLField(ops, operation, &fieldPathSuggestedTests, fields.SuggestedTests)
+	addHTMLField(ops, operation, &fieldPathRejectedIdeas, fields.RejectedIdeas)
+	addHTMLField(ops, operation, &fieldPathResources, fields.Resources)
 }
 
 // buildQualityFieldOps constructs JSON patch operations from QualityFields.
@@ -859,7 +892,7 @@ func buildFeatureFieldOps(
 	addBoolField(ops, operation, &fieldPathAtRisk, fields.AtRisk)
 	addStringField(ops, operation, &fieldPathDeliveryRisk, fields.DeliveryRisk)
 	addStringField(ops, operation, &fieldPathRiskReason, fields.RiskReason)
-	addStringField(ops, operation, &fieldPathMitigationPlan, fields.MitigationPlan)
+	addHTMLField(ops, operation, &fieldPathMitigationPlan, fields.MitigationPlan)
 }
 
 // buildBugFieldOps constructs JSON patch operations from BugSpecificFields.
@@ -868,10 +901,10 @@ func buildBugFieldOps(ops *[]webapi.JsonPatchOperation, operation *webapi.Operat
 		return
 	}
 
-	addStringField(ops, operation, &fieldPathReproSteps, fields.ReproSteps)
-	addStringField(ops, operation, &fieldPathSystemInfo, fields.SystemInfo)
+	addHTMLField(ops, operation, &fieldPathReproSteps, fields.ReproSteps)
+	addHTMLField(ops, operation, &fieldPathSystemInfo, fields.SystemInfo)
 	addStringField(ops, operation, &fieldPathBlocked, fields.Blocked)
-	addStringField(ops, operation, &fieldPathProposedFix, fields.ProposedFix)
+	addHTMLField(ops, operation, &fieldPathProposedFix, fields.ProposedFix)
 }
 
 // buildUserStoryFieldOps constructs JSON patch operations from UserStorySpecificFields.
@@ -894,14 +927,14 @@ func buildTestCaseFieldOps(
 		return
 	}
 
-	addStringField(ops, operation, &fieldPathSteps, fields.Steps)
+	addHTMLField(ops, operation, &fieldPathSteps, fields.Steps)
 	addStringField(ops, operation, &fieldPathAutomatedTestName, fields.AutomatedTestName)
 	addStringField(ops, operation, &fieldPathAutomatedTestStorage, fields.AutomatedTestStorage)
 	addStringField(ops, operation, &fieldPathAutomatedTestType, fields.AutomatedTestType)
 	addStringField(ops, operation, &fieldPathAutomatedTestID, fields.AutomatedTestID)
 	addStringField(ops, operation, &fieldPathAutomationStatus, fields.AutomationStatus)
-	addStringField(ops, operation, &fieldPathParameters, fields.Parameters)
-	addStringField(ops, operation, &fieldPathLocalDataSource, fields.LocalDataSource)
+	addHTMLField(ops, operation, &fieldPathParameters, fields.Parameters)
+	addHTMLField(ops, operation, &fieldPathLocalDataSource, fields.LocalDataSource)
 }
 
 // buildCodeReviewFieldOps constructs JSON patch operations from CodeReviewFields.
@@ -924,7 +957,7 @@ func buildCodeReviewFieldOps(ops *[]webapi.JsonPatchOperation, operation *webapi
 func buildCommonOps(ops *[]webapi.JsonPatchOperation, operation *webapi.Operation, fields CommonFields) {
 	// Existing fields
 	addStringField(ops, operation, &fieldPathAssignedTo, fields.AssignedTo)
-	addStringField(ops, operation, &fieldPathDescription, fields.Description)
+	addHTMLField(ops, operation, &fieldPathDescription, fields.Description)
 	addStringField(ops, operation, &fieldPathIterationPath, fields.IterationPath)
 	addStringField(ops, operation, &fieldPathAreaPath, fields.AreaPath)
 	addStringField(ops, operation, &fieldPathSize, fields.Size)
@@ -964,7 +997,7 @@ func buildUpdateOps(opts UpdateOptions) []webapi.JsonPatchOperation {
 	// Update-specific fields
 	addStringField(&ops, &replace, &fieldPathTitle, opts.Title)
 	addStringField(&ops, &replace, &fieldPathState, opts.State)
-	addStringField(&ops, &replace, &fieldPathAcceptanceCriteria, opts.AcceptanceCriteria)
+	addHTMLField(&ops, &replace, &fieldPathAcceptanceCriteria, opts.AcceptanceCriteria)
 	addStringField(&ops, &replace, &fieldPathReason, opts.Reason)
 	addStringField(&ops, &replace, &fieldPathTags, opts.Tags)
 
@@ -1109,4 +1142,60 @@ func convertToMarkdown(raw string) string {
 	}
 
 	return converted
+}
+
+// containsHTMLTags checks if a string contains common HTML block-level tags or closing tags.
+// Used to distinguish HTML input from Markdown input.
+func containsHTMLTags(s string) bool {
+	tags := []string{"<p>", "<div>", "<h1>", "<h2>", "<h3>", "<h4>", "<h5>", "<h6>", "<ul>", "<ol>", "</"}
+	for _, tag := range tags {
+		if strings.Contains(s, tag) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// convertMarkdownToHTML converts a Markdown string to HTML using GitHub Flavored Markdown.
+// Falls back to the original string if conversion fails.
+func convertMarkdownToHTML(md string) string {
+	if md == "" {
+		return ""
+	}
+
+	var buf bytes.Buffer
+	if err := mdConverter.Convert([]byte(md), &buf); err != nil {
+		// Fallback to original on error
+		return md
+	}
+
+	return buf.String()
+}
+
+// sanitizeHTML removes dangerous HTML tags and attributes using bluemonday's UGC policy.
+// This prevents XSS attacks while allowing safe HTML formatting.
+func sanitizeHTML(html string) string {
+	return htmlSanitizer.Sanitize(html)
+}
+
+// prepareHTMLField converts Markdown to HTML (if needed) and sanitizes the result.
+// If the input already contains HTML tags, it skips Markdown conversion.
+// Always sanitizes the output to prevent XSS attacks.
+func prepareHTMLField(input string) string {
+	if input == "" {
+		return ""
+	}
+
+	var html string
+	if containsHTMLTags(input) {
+		// Already HTML, skip conversion
+		html = input
+	} else {
+		// Treat as Markdown and convert
+		html = convertMarkdownToHTML(input)
+	}
+
+	// Always sanitize before sending to Azure DevOps
+	return sanitizeHTML(html)
 }
